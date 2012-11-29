@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License. 
  */
 
 package net.spy.memcached;
@@ -30,6 +41,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -52,21 +64,30 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.spy.memcached.auth.AuthDescriptor;
 import net.spy.memcached.auth.AuthThreadMonitor;
 import net.spy.memcached.compat.SpyObject;
+import net.spy.memcached.config.ClusterConfiguration;
+import net.spy.memcached.ConfigurationPoller;
+import net.spy.memcached.config.NodeEndPoint;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.internal.BulkGetFuture;
+import net.spy.memcached.internal.GetConfigFuture;
 import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.internal.SingleElementInfiniteIterator;
 import net.spy.memcached.ops.CASOperationStatus;
 import net.spy.memcached.ops.CancelledOperationStatus;
 import net.spy.memcached.ops.ConcatenationType;
+import net.spy.memcached.ops.ConfigurationType;
+import net.spy.memcached.ops.DeleteConfigOperation;
 import net.spy.memcached.ops.DeleteOperation;
 import net.spy.memcached.ops.GetAndTouchOperation;
+import net.spy.memcached.ops.GetConfigOperation;
 import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetsOperation;
 import net.spy.memcached.ops.Mutator;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
+import net.spy.memcached.ops.OperationErrorType;
+import net.spy.memcached.ops.OperationException;
 import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.StatsOperation;
@@ -76,6 +97,7 @@ import net.spy.memcached.ops.StoreType;
 import net.spy.memcached.ops.TimedOutOperationStatus;
 import net.spy.memcached.protocol.ascii.AsciiOperationFactory;
 import net.spy.memcached.protocol.binary.BinaryOperationFactory;
+import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.TranscodeService;
 import net.spy.memcached.transcoders.Transcoder;
 import net.spy.memcached.util.StringUtils;
@@ -86,8 +108,15 @@ import net.spy.memcached.util.StringUtils;
  * <h2>Basic usage</h2>
  *
  * <pre>
+ * The Client can be run in static mode or dynamic mode. In basic usage the mode is automatically 
+ * determined based on the endpoint specified. If the endpoint has cfg subdomain, then the client is
+ * initialized in dynamic mode.
+ *  
+ * // Use dynamic mode to leverage Elasticache Autodiscovery feature.
+ * // In dynamic mode, the number of servers in the cluster and their endpoint details are automatically picked up
+ * // using the configuration endpoint of the elasticache cluster.
  * MemcachedClient c = new MemcachedClient(
- *    new InetSocketAddress(&quot;hostname&quot;, portNum));
+ *    new InetSocketAddress(&quot;configurationEndpoint&quot;, portNum));
  *
  * // Store a value (async) for one hour
  * c.set(&quot;someKey&quot;, 3600, someObject);
@@ -95,6 +124,8 @@ import net.spy.memcached.util.StringUtils;
  * Object myObject = c.get(&quot;someKey&quot;);
  * </pre>
  *
+ * In the basic usage with out connection factory, the client mode is automatically determined 
+ * 
  * <h2>Advanced Usage</h2>
  *
  * <p>
@@ -108,10 +139,15 @@ import net.spy.memcached.util.StringUtils;
  * </p>
  *
  * <pre>
- *      // Get a memcached client connected to several servers
- *      // over the binary protocol
- *      MemcachedClient c = new MemcachedClient(new BinaryConnectionFactory(),
- *              AddrUtil.getAddresses("server1:11211 server2:11211"));
+ *      // Get a memcached client connected over the binary protocol
+ *      // The number of servers in the cluster and their endpoint details are automatically picked up
+ *      // using the configuration endpoint of the elasticache cluster. 
+ *      MemcachedClient c = new MemcachedClient(new BinaryConnectionFactory(ClientMode.Dynamic),
+ *              AddrUtil.getAddresses("configurationEndpoint:11211"));
+ *              // or //
+ *  // For operating with out the autodiscovery feature, use static mode(ClientMode.Static)
+ *      MemcachedClient c = new MemcachedClient(new BinaryConnectionFactory(ClientMode.Static),
+ *              AddrUtil.getAddresses("configurationEndpoint:11211"));
  *
  *      // Try to get a value, for up to 5 seconds, and cancel if it
  *      // doesn't return
@@ -140,11 +176,13 @@ import net.spy.memcached.util.StringUtils;
 public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     ConnectionObserver {
 
+  protected final ClientMode clientMode;
+  
   protected volatile boolean shuttingDown;
 
   protected final long operationTimeout;
 
-  protected final MemcachedConnection mconn;
+  protected MemcachedConnection mconn;
 
   protected final OperationFactory opFact;
 
@@ -160,15 +198,28 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
 
   protected final ExecutorService executorService;
 
+  private NodeEndPoint configurationNode;
+  //Set default value to true to attempt config API first. The value is set to false if
+  //OperationNotSupportedException is thrown.
+  private boolean isConfigurationProtocolSupported = true;
+  
+  //This is used to dynamic mode to track whether the client is initialized with set of cache nodes for the first time.
+  private boolean isConfigurationInitialized = false;
+  
+  private Transcoder<Object> configTranscoder = new SerializingTranscoder();
+  
+  private ConfigurationPoller configPoller;
+  
   /**
    * Get a memcache client operating on the specified memcached locations.
-   *
-   * @param ia the memcached locations
-   * @throws IOException if connections cannot be established
+   * 
+   * @param addrs the memcached locations
+   * @throws IOException
    */
-  public MemcachedClient(InetSocketAddress... ia) throws IOException {
-    this(new DefaultConnectionFactory(), Arrays.asList(ia));
-  }
+  public MemcachedClient(InetSocketAddress... addrs) throws IOException {
+    //The connectionFactory is created later based on client mode.
+    this(null, Arrays.asList(addrs), true);
+   }
 
   /**
    * Get a memcache client over the specified memcached locations.
@@ -177,9 +228,14 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
    * @throws IOException if connections cannot be established
    */
   public MemcachedClient(List<InetSocketAddress> addrs) throws IOException {
-    this(new DefaultConnectionFactory(), addrs);
+    //The connectionFactory is created later based on client mode.
+    this(null, addrs, true);
   }
 
+  public MemcachedClient(ConnectionFactory cf, List<InetSocketAddress> addrs) throws IOException{
+    this(cf, addrs, false);
+  }
+  
   /**
    * Get a memcache client over the specified memcached locations.
    *
@@ -187,11 +243,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
    * @param addrs the socket addresses
    * @throws IOException if connections cannot be established
    */
-  public MemcachedClient(ConnectionFactory cf, List<InetSocketAddress> addrs)
-    throws IOException {
-    if (cf == null) {
-      throw new NullPointerException("Connection factory required");
-    }
+  private MemcachedClient(ConnectionFactory cf, List<InetSocketAddress> addrs, boolean determineClientMode) throws IOException{
     if (addrs == null) {
       throw new NullPointerException("Server list required");
     }
@@ -199,22 +251,110 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
       throw new IllegalArgumentException("You must have at least one server to"
           + " connect to");
     }
+    
+    //An internal customer convenience check to determine whether the client mode based on 
+    // the DNS name if only one endpoint is specified. 
+    if(determineClientMode){
+      if(addrs.size() == 1){
+        if(addrs.get(0) == null){
+          throw new NullPointerException("Socket address is null");
+        }
+        String hostName = addrs.get(0).getHostName();
+        //All config endpoints has ".cfg." subdomain in the DNS name.
+        if(hostName != null && hostName.contains(".cfg.")){
+          cf = new DefaultConnectionFactory(ClientMode.Dynamic);
+        }
+      }
+      //Fallback to static mode
+      if(cf == null){
+        cf = new DefaultConnectionFactory(ClientMode.Static);
+      }
+    }
+
+    if (cf == null) {
+      throw new NullPointerException("Connection factory required");
+    }
+
     if (cf.getOperationTimeout() <= 0) {
       throw new IllegalArgumentException("Operation timeout must be positive.");
     }
+
+    if(cf.getClientMode() == ClientMode.Dynamic && addrs.size() > 1){
+      throw new IllegalArgumentException("Only one configuration endpoint is valid with dynamic client mode.");
+    }
+    
+    
     connFactory = cf;
+    clientMode = cf.getClientMode();
     tcService = new TranscodeService(cf.isDaemon());
     transcoder = cf.getDefaultTranscoder();
     opFact = cf.getOperationFactory();
     assert opFact != null : "Connection factory failed to make op factory";
-    mconn = cf.createConnection(addrs);
-    assert mconn != null : "Connection factory failed to make a connection";
+    
     operationTimeout = cf.getOperationTimeout();
     authDescriptor = cf.getAuthDescriptor();
     executorService = cf.getListenerExecutorService();
     if (authDescriptor != null) {
       addObserver(this);
     }
+    
+    if(clientMode == ClientMode.Dynamic){
+      initializeClientUsingConfigEndPoint(cf, addrs.get(0));
+    } else {
+      setupConnection(cf, addrs);
+    }
+  }
+  
+  /**
+   * Establish a connection to the configuration endpoint and get the list of cache node endpoints. Then initialize the 
+   * memcached client with the cache node endpoints list. 
+   * @param cf
+   * @param addrs
+   * @throws IOException
+   */
+  private void initializeClientUsingConfigEndPoint(ConnectionFactory cf, InetSocketAddress configurationEndPoint) 
+      throws IOException{
+    configurationNode = new NodeEndPoint(configurationEndPoint.getHostName(), configurationEndPoint.getPort());
+    setupConnection(cf, Collections.singletonList(configurationEndPoint));
+    
+    String configResult;
+    try{
+      try{
+        //GetConfig
+        configResult = (String)this.getConfig(configurationEndPoint, ConfigurationType.CLUSTER, configTranscoder);
+      }catch(OperationNotSupportedException e){
+        
+        configResult = (String)this.get(configurationEndPoint, ConfigurationType.CLUSTER.getValueWithNameSpace(), configTranscoder);
+        isConfigurationProtocolSupported = false;
+      }
+      
+      if(configResult != null && ! configResult.trim().isEmpty()){
+        //Parse configuration to get the list of cache servers.
+        ClusterConfiguration clusterConfiguration = AddrUtil.parseClusterTypeConfiguration(configResult);
+        
+        //Initialize client with the actual set of endpoints.
+        mconn.notifyUpdate(clusterConfiguration);
+        isConfigurationInitialized = true;
+      }
+    }catch(OperationTimeoutException e){
+      getLogger().warn("Configuration endpoint timed out for config call. Leaving the initialization work to configuration poller.");
+    }
+    
+    //Initialize and start the poller.
+    configPoller = new ConfigurationPoller(this, cf.getDynamicModePollingInterval());
+    configPoller.subscribeForClusterConfiguration(mconn);
+  }
+
+  private void setupConnection(ConnectionFactory cf, List<InetSocketAddress> addrs)
+    throws IOException {
+
+    mconn = cf.createConnection(addrs);
+    assert mconn != null : "Connection factory failed to make a connection";
+
+  }
+  
+  public NodeEndPoint getConfigurationNode(){
+    return configurationNode;
   }
 
   /**
@@ -236,6 +376,43 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
         rv.add(node.getSocketAddress());
       }
     }
+    return rv;
+  }
+  
+  /**
+   * Get the endpoints of available servers. 
+   * Use this method instead of "getAvailableServers" if details about hostname, ipAddress and port of the servers
+   * are required. 
+   *  
+   * <p>
+   * This is based on a snapshot in time so shouldn't be considered completely
+   * accurate, but is a useful for getting a feel for what's working and what's
+   * not working.
+   * </p>
+   *
+   * @return point-in-time view of currently available servers
+   */
+  public Collection<NodeEndPoint> getAvailableNodeEndPoints() {
+    ArrayList<NodeEndPoint> rv = new ArrayList<NodeEndPoint>();
+    for (MemcachedNode node : mconn.getLocator().getAll()) {
+      if (node.isActive()) {
+        rv.add(node.getNodeEndPoint());
+      }
+    }
+    return rv;
+  }
+  
+  /**
+   * Get the endpoints of all servers. 
+   *  
+   * @return point-in-time view of current list of servers
+   */
+  public Collection<NodeEndPoint> getAllNodeEndPoints() {
+    ArrayList<NodeEndPoint> rv = new ArrayList<NodeEndPoint>();
+    for (MemcachedNode node : mconn.getLocator().getAll()) {
+        rv.add(node.getNodeEndPoint());
+    }
+    
     return rv;
   }
 
@@ -294,6 +471,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
 
   private CountDownLatch broadcastOp(BroadcastOpFactory of,
       Collection<MemcachedNode> nodes, boolean checkShuttingDown) {
+    checkState();
     if (checkShuttingDown && shuttingDown) {
       throw new IllegalStateException("Shutting down");
     }
@@ -325,7 +503,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
             }
           });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -354,7 +532,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
           }
         });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -406,7 +584,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
       }
     });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -651,7 +829,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
             }
           });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -1042,7 +1220,67 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
       }
     });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
+    return rv;
+  }
+  
+  /**
+   * Get with a single key from the specified node.
+   *
+   * @param <T>
+   * @param key the key to get
+   * @param tc the transcoder to serialize and unserialize value
+   * @return the result from the cache (null if there is none)
+   * @throws OperationTimeoutException if the global operation timeout is
+   *           exceeded
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  <T> T get(InetSocketAddress sa, final String key, final Transcoder<T> tc) {
+    try{
+      return asyncGet(sa, key, tc).get(operationTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted waiting for value", e);
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Exception waiting for value", e);
+    } catch (TimeoutException e) {
+      throw new OperationTimeoutException("Timeout waiting for value", e);
+    }
+  }
+  /**
+   * Get the given key from the specified node.
+   * @param <T>
+   * @param sa - The InetSocketAddress of the node from which to fetch the key 
+   * @param key the key to fetch
+   * @param transcoder the transcoder to serialize and unserialize value
+   * @return a future that will hold the return value of the fetch
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  <T> GetFuture<T> asyncGet(InetSocketAddress sa, final String key, final Transcoder<T> tc) {
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
+    Operation op = opFact.get(key, new GetOperation.Callback() {
+      private Future<T> val = null;
+
+      public void receivedStatus(OperationStatus status) {
+        rv.set(val, status);
+      }
+
+      public void gotData(String k, int flags, byte[] data) {
+        assert key.equals(k) : "Wrong key returned";
+        val =
+            tcService.decode(tc, new CachedData(flags, data, transcoder.getMaxSize()));
+      }
+
+      public void complete() {
+        latch.countDown();
+      }
+    });
+    rv.setOperation(op);
+    mconn.enqueueOperation(sa, op);
+    
     return rv;
   }
 
@@ -1101,7 +1339,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
       }
     });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -1257,6 +1495,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     return get(key, transcoder);
   }
 
+  
   /**
    * Asynchronously get a bunch of objects from the cache.
    *
@@ -1532,7 +1771,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
           }
         });
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -1648,6 +1887,177 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
   public Map<String, Object> getBulk(String... keys) {
     return getBulk(Arrays.asList(keys), transcoder);
   }
+  
+  private void enqueueOperation(String key, Operation op){
+    checkState();
+    mconn.enqueueOperation(key, op);
+  }
+  
+  private void checkState() {
+    if (clientMode == ClientMode.Dynamic && !isConfigurationInitialized) {
+      throw new IllegalStateException("Client is not initialized");
+    }
+  }
+  
+  /**
+   * Get the config
+   *
+   * @param addr - The node from which to retrieve the configuration
+   * @param type - config to get
+   * @return the result from the server.
+   * @throws OperationTimeoutException if the global operation timeout is
+   *           exceeded
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public Object getConfig(InetSocketAddress addr, ConfigurationType type) {
+    return getConfig(addr, type, transcoder);
+  }
+
+  /**
+   * Get the config using the config protocol.
+   * The command format is "config get <type>"
+   * @param addr - The node from which to retrieve the configuration
+   * @param config to get
+   * @param tc the transcoder to serialize and unserialize value
+   * @return the result from the server (null if there is none)
+   * @throws OperationTimeoutException if the global operation timeout is
+   *           exceeded
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public <T> T getConfig(InetSocketAddress addr, ConfigurationType type, Transcoder<T> tc) {
+    try {
+      return asyncGetConfig(addr, type, tc).get(operationTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Interrupted waiting for config", e);
+    } catch(OperationNotSupportedException e){
+      throw e;
+    } catch (ExecutionException e) {
+      if(e.getCause() instanceof OperationException){
+        OperationException exp = (OperationException)e.getCause();
+        if(OperationErrorType.GENERAL.equals(exp.getType())){
+          throw new OperationNotSupportedException("This version of getConfig command is not supported.");
+        }
+      }
+      throw new RuntimeException("Exception waiting for config", e);
+    } catch (TimeoutException e) {
+      throw new OperationTimeoutException("Timeout waiting for config", e);
+    }
+  }
+  
+  /**
+   * Get the given configurationType asynchronously.
+   *
+   * @param addr - The node from which to retrieve the configuration
+   * @param configurationType the configurationType to fetch
+   * @param tc the transcoder to serialize and unserialize value
+   * @return a future that will hold the return value of the fetch
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public <T> GetConfigFuture<T> asyncGetConfig(InetSocketAddress addr, final ConfigurationType type, final Transcoder<T> tc) {
+
+    final CountDownLatch latch = new CountDownLatch(1);
+    final GetConfigFuture<T> rv = new GetConfigFuture<T>(latch, operationTimeout, type);
+    Operation op = opFact.getConfig(type, new GetConfigOperation.Callback() {
+      private Future<T> val = null;
+
+      public void receivedStatus(OperationStatus status) {
+        rv.set(val, status);
+      }
+
+      public void gotData(ConfigurationType configurationType, int flags, byte[] data) {
+        assert type.equals(configurationType) : "Wrong type returned";
+        val =
+            tcService.decode(tc, new CachedData(flags, data, tc.getMaxSize()));
+      }
+
+      public void complete() {
+        latch.countDown();
+      }
+    });
+    rv.setOperation(op);
+    mconn.enqueueOperation(addr, op);
+    return rv;
+  }
+  
+  /**
+   * Sets the configuration in the cache node for the specified configurationType.
+   *
+   * @param addr - The node where the configuration is set.
+   * @param type the type under which this configuration should be added.
+   * @param o the configuration to store
+   * @return a future representing the processing of this operation
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public OperationFuture<Boolean> setConfig(InetSocketAddress addr, ConfigurationType configurationType, Object o) {
+    return asyncSetConfig(addr, configurationType, o, transcoder);
+  }
+
+  /**
+   * Sets the configuration in the cache node for the specified configurationType.
+   *
+   * @param addr - The node where the configuration is set.
+   * @param type the type under which this configuration should be added.
+   * @param o the configuration to store
+   * @param tc the transcoder to serialize and unserialize the configuration
+   * @return a future representing the processing of this operation
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public <T> OperationFuture<Boolean> setConfig(InetSocketAddress addr, ConfigurationType configurationType, Object o, Transcoder<T> tc) {
+    return asyncSetConfig(addr, configurationType, o, transcoder);
+  }
+
+  private <T> OperationFuture<Boolean> asyncSetConfig(InetSocketAddress addr, 
+      ConfigurationType configurationType, T value, Transcoder<T> tc) {
+    CachedData co = tc.encode(value);
+    final CountDownLatch latch = new CountDownLatch(1);
+    final OperationFuture<Boolean> rv =
+        new OperationFuture<Boolean>(configurationType.getValue(), latch, operationTimeout);
+    Operation op = opFact.setConfig(configurationType, co.getFlags(), co.getData(),
+        new OperationCallback() {
+            public void receivedStatus(OperationStatus val) {
+              rv.set(val.isSuccess(), val);
+            }
+
+            public void complete() {
+              latch.countDown();
+            }
+          });
+    rv.setOperation(op);
+    mconn.enqueueOperation(addr, op);
+    return rv;
+  }
+
+  /**
+   * Delete the given configurationType from the cache server.
+   *
+   * @param addr - The node in which the configuration is deleted.
+   * @param configurationType the configurationType to delete
+   * @return whether or not the operation was performed
+   * @throws IllegalStateException in the rare circumstance where queue is too
+   *           full to accept any more requests
+   */
+  public OperationFuture<Boolean> deleteConfig(InetSocketAddress addr, ConfigurationType configurationType) {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(configurationType.getValue(),
+        latch, operationTimeout);
+    DeleteConfigOperation op = opFact.deleteConfig(configurationType, new OperationCallback() {
+      public void receivedStatus(OperationStatus s) {
+        rv.set(s.isSuccess(), s);
+      }
+
+      public void complete() {
+        latch.countDown();
+      }
+    });
+    rv.setOperation(op);
+    mconn.enqueueOperation(addr, op);
+    return rv;
+  }
 
   /**
    * Get the versions of all of the connected memcacheds.
@@ -1751,7 +2161,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
   private long mutate(Mutator m, String key, long by, long def, int exp) {
     final AtomicLong rv = new AtomicLong();
     final CountDownLatch latch = new CountDownLatch(1);
-    mconn.enqueueOperation(key, opFact.mutate(m, key, by, def, exp,
+    enqueueOperation(key, opFact.mutate(m, key, by, def, exp,
         new OperationCallback() {
         @Override
         public void receivedStatus(OperationStatus s) {
@@ -2002,7 +2412,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
             rv.signalComplete();
           }
         });
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     rv.setOperation(op);
     return rv;
   }
@@ -2337,7 +2747,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     }
 
     rv.setOperation(op);
-    mconn.enqueueOperation(key, op);
+    enqueueOperation(key, op);
     return rv;
   }
 
@@ -2509,6 +2919,9 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     } finally {
       // But always begin the shutdown sequence
       try {
+        if(clientMode == ClientMode.Dynamic){
+          configPoller.shutdown();
+        }
         mconn.setName(baseName + " - SHUTTING DOWN (telling client)");
         mconn.shutdown();
         mconn.setName(baseName + " - SHUTTING DOWN (informed client)");
@@ -2628,6 +3041,22 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     // Don't care.
   }
 
+  public boolean isConfigurationProtocolSupported(){
+    return isConfigurationProtocolSupported;
+  }
+
+  void setIsConfigurationProtocolSupported(boolean isConfigurationProtocolSupported){
+    this.isConfigurationProtocolSupported = isConfigurationProtocolSupported;                                                                           
+  }
+
+  public boolean isConfigurationInitialized(){
+    return isConfigurationInitialized;
+  }
+  
+  void setIsConfigurtionInitialized(boolean isConfigurationInitialized){
+    this.isConfigurationInitialized = isConfigurationInitialized;
+  }
+  
   @Override
   public String toString() {
     return connFactory.toString();

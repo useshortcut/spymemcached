@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -28,10 +39,14 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.spy.memcached.config.ClusterConfiguration;
+import net.spy.memcached.config.NodeEndPoint;
+
 /**
  * Convenience utilities for simplifying common address parsing.
  */
 public final class AddrUtil {
+  public static final char HOST_CONFIG_DELIMITER = '|';
 
   private AddrUtil() {
     // Empty
@@ -103,4 +118,64 @@ public final class AddrUtil {
     }
     return addrs;
   }
+  
+  /**
+   * Parse response from getConfig for cluster type.
+   * version number
+   * hostname1|ipaddress1|port hostname2|ipaddress2|port
+   *  
+   * returns the ClusterConfiguration object which contains the parsed results. 
+   */
+  public static ClusterConfiguration parseClusterTypeConfiguration(String configurationResponse) {
+    if (configurationResponse == null) {
+      throw new NullPointerException("Null configuration");
+    }
+    if (configurationResponse.trim().equals("")) {
+      throw new IllegalArgumentException("No configuration in the response:" + configurationResponse);
+    }
+    String[] lines = configurationResponse.trim().split("(?:\\r?\\n)");
+    if(lines == null || lines.length != 2) {
+      throw new IllegalArgumentException("Incorrect response format. Response:" + configurationResponse);
+    }
+    
+    String versionString = lines[0].trim();
+    if(versionString.equals("")){
+      throw new IllegalArgumentException("Version number is missing. Response:" + configurationResponse);
+    }
+    
+    long versionNumber = Long.parseLong(versionString);
+    
+    String hostList = lines[1].trim();
+    if (hostList.equals("")) {
+      throw new IllegalArgumentException("Empty host list in the response:" + configurationResponse);
+    }
+    
+    List<NodeEndPoint> endPoints = new ArrayList<NodeEndPoint>();
+
+    for (String hostDetails : hostList.split("(?:\\s)+")) {
+      if (hostDetails.equals("")) {
+        continue;
+      }
+
+      int firstDelimiter = hostDetails.indexOf(HOST_CONFIG_DELIMITER);
+      int secondDelimiter = hostDetails.lastIndexOf(HOST_CONFIG_DELIMITER);
+      if (firstDelimiter < 1 || firstDelimiter == secondDelimiter) {
+        throw new IllegalArgumentException("Invalid server ''" + hostDetails
+            + "'' in response:  " + configurationResponse);
+      }
+      String hostName = hostDetails.substring(0, firstDelimiter).trim();
+      String ipAddress = hostDetails.substring(firstDelimiter+1, secondDelimiter).trim();
+      String portNum = hostDetails.substring(secondDelimiter + 1).trim();
+      int port = Integer.parseInt(portNum);
+      
+      NodeEndPoint endPoint = new NodeEndPoint(hostName, ipAddress, port);
+      endPoints.add(endPoint);
+    }
+    assert !endPoints.isEmpty() : "No endpoints found";
+    
+    ClusterConfiguration config = new ClusterConfiguration(versionNumber, endPoints);
+    
+    return config;
+  }
+
 }

@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -49,6 +60,8 @@ public class ConnectionFactoryBuilder {
 
   protected Transcoder<Object> transcoder;
 
+  protected ClientMode clientMode;
+  
   protected FailureMode failureMode;
 
   protected Collection<ConnectionObserver> initialObservers =
@@ -86,6 +99,7 @@ public class ConnectionFactoryBuilder {
   }
 
   public ConnectionFactoryBuilder(ConnectionFactory cf) {
+    setClientMode(cf.getClientMode());
     setAuthDescriptor(cf.getAuthDescriptor());
     setDaemon(cf.isDaemon());
     setFailureMode(cf.getFailureMode());
@@ -102,6 +116,16 @@ public class ConnectionFactoryBuilder {
     setEnableMetrics(cf.enableMetrics());
     setListenerExecutorService(cf.getListenerExecutorService());
     setAuthWaitTime(cf.getAuthWaitTime());
+  }
+
+  /**
+   * 
+   * @param clientMode
+   * @return
+   */
+  public ConnectionFactoryBuilder setClientMode(ClientMode clientMode){
+    this.clientMode = clientMode;
+    return this;
   }
 
   public ConnectionFactoryBuilder setOpQueueFactory(OperationQueueFactory q) {
@@ -173,7 +197,7 @@ public class ConnectionFactoryBuilder {
     opFact = f;
     return this;
   }
-
+  
   /**
    * Set the default operation timeout in milliseconds.
    */
@@ -326,6 +350,11 @@ public class ConnectionFactoryBuilder {
   public ConnectionFactory build() {
     return new DefaultConnectionFactory() {
 
+      @Override
+      public ClientMode getClientMode(){
+        return clientMode == null ? super.getClientMode() : clientMode;
+      }
+      
       @Override
       public BlockingQueue<Operation> createOperationQueue() {
         return opQueueFactory == null ? super.createOperationQueue()

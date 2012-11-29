@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached.protocol;
@@ -40,6 +51,7 @@ import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedConnection;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.compat.SpyObject;
+import net.spy.memcached.config.NodeEndPoint;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.protocol.binary.TapAckOperationImpl;
@@ -51,7 +63,8 @@ import net.spy.memcached.protocol.binary.TapAckOperationImpl;
 public abstract class TCPMemcachedNodeImpl extends SpyObject implements
     MemcachedNode {
 
-  private final SocketAddress socketAddress;
+  private NodeEndPoint nodeEndPoint;
+  private SocketAddress socketAddress;
   private final ByteBuffer rbuf;
   private final ByteBuffer wbuf;
   protected final BlockingQueue<Operation> writeQ;
@@ -80,12 +93,14 @@ public abstract class TCPMemcachedNodeImpl extends SpyObject implements
       BlockingQueue<Operation> iq, long opQueueMaxBlockTime,
       boolean waitForAuth, long dt, long authWaitTime, ConnectionFactory fact) {
     super();
+
     assert sa != null : "No SocketAddress";
     assert c != null : "No SocketChannel";
     assert bufSize > 0 : "Invalid buffer size: " + bufSize;
     assert rq != null : "No operation read queue";
     assert wq != null : "No operation write queue";
     assert iq != null : "No input queue";
+    
     socketAddress = sa;
     connectionFactory = fact;
     this.authWaitTime = authWaitTime;
@@ -427,6 +442,24 @@ public abstract class TCPMemcachedNodeImpl extends SpyObject implements
    */
   public final SocketAddress getSocketAddress() {
     return socketAddress;
+  }
+  
+  /*
+   * (non-Javadoc)
+   *
+   * @see net.spy.memcached.MemcachedNode#getNodeEndPoint()
+   */
+  public final NodeEndPoint getNodeEndPoint() {
+    return nodeEndPoint;
+  }
+
+  /**
+   * 
+   * @param nodeEndPoint
+   */
+  public void setNodeEndPoint(NodeEndPoint nodeEndPoint){
+    this.nodeEndPoint = nodeEndPoint;
+    this.socketAddress = nodeEndPoint.getInetSocketAddress();
   }
 
   /*

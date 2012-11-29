@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -46,6 +57,7 @@ import net.spy.memcached.util.StringUtils;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -72,11 +84,31 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
+import net.spy.memcached.compat.SpyThread;
+import net.spy.memcached.compat.log.LoggerFactory;
+import net.spy.memcached.config.ClusterConfiguration;
+import net.spy.memcached.config.ClusterConfigurationObserver;
+import net.spy.memcached.config.NodeEndPoint;
+import net.spy.memcached.ops.KeyedOperation;
+import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationException;
+import net.spy.memcached.ops.OperationState;
+import net.spy.memcached.ops.TapOperation;
+import net.spy.memcached.ops.VBucketAware;
+import net.spy.memcached.protocol.binary.TapAckOperationImpl;
+import net.spy.memcached.util.StringUtils;
 
 /**
- * Main class for handling connections to a memcached cluster.
+ * Connection to a cluster of memcached servers. 
+ * MemcachedConnection also acts as an observer for cluster configuration changes.
+ * In the mode ClientMode.Dynamic, the ConfigurationPoller notifies the observers when there is 
+ * change in cluster configuration.
+ * 
  */
-public class MemcachedConnection extends SpyThread {
+public class MemcachedConnection extends SpyThread implements ClusterConfigurationObserver{
 
   /**
    * The number of empty selects we'll allow before assuming we may have
@@ -142,7 +174,7 @@ public class MemcachedConnection extends SpyThread {
   /**
    * The {@link NodeLocator} to use for this connection.
    */
-  protected final NodeLocator locator;
+  protected NodeLocator locator;
 
   /**
    * The configured {@link FailureMode}.
@@ -209,11 +241,26 @@ public class MemcachedConnection extends SpyThread {
    */
   private final List<Operation> retryOps;
 
+  protected List<NodeEndPoint> nodesToAdd;
+  protected List<MemcachedNode> nodesToDelete;
+  
+  //Lock to avoid race condition between the notification thread and the thread which 
+  //manages lifecycle of node and it's nio channels. This is to avoid managing nio
+  //objects across threads which is more risk prone for concurrency issues. 
+  protected final ReentrantLock lockForNodeUpdates;
+  
+  //Lock for managing condition variable for poller thread to wait for successful update
+  //of node list to the locator object.
+  protected final ReentrantLock conditionLock;
+  protected final Condition nodeUpdateCondition;
+  
   /**
    * Holds all nodes that are scheduled for shutdown.
    */
   protected final ConcurrentLinkedQueue<MemcachedNode> nodesToShutdown;
-
+  
+  protected final List<NodeEndPoint> newEndPoints;
+  
   /**
    * If set to true, a proper check after finish connecting is done to see
    * if the node is not responding but really alive.
@@ -243,16 +290,16 @@ public class MemcachedConnection extends SpyThread {
   /**
    * Construct a {@link MemcachedConnection}.
    *
-   * @param bufSize the size of the buffer used for reading from the server.
-   * @param f the factory that will provide an operation queue.
-   * @param a the addresses of the servers to connect to.
+   * @param bufSize the size of the buffer used for reading from the server
+   * @param f the factory that will provide an operation queue
+   * @param socketAddressList the addresses of the servers to connect to
    * @param obs the initial observers to add.
    * @param fm the failure mode to use.
    * @param opfactory the operation factory.
    * @throws IOException if a connection attempt fails early
    */
   public MemcachedConnection(final int bufSize, final ConnectionFactory f,
-      final List<InetSocketAddress> a, final Collection<ConnectionObserver> obs,
+      final List<InetSocketAddress> socketAddressList, final Collection<ConnectionObserver> obs,
       final FailureMode fm, final OperationFactory opfactory) throws IOException {
     connObservers.addAll(obs);
     reconnectQueue = new TreeMap<Long, MemcachedNode>();
@@ -264,6 +311,11 @@ public class MemcachedConnection extends SpyThread {
     timeoutExceptionThreshold = f.getTimeoutExceptionThreshold();
     selector = Selector.open();
     retryOps = Collections.synchronizedList(new ArrayList<Operation>());
+    lockForNodeUpdates = new ReentrantLock();
+    conditionLock = new ReentrantLock();
+    nodeUpdateCondition = conditionLock.newCondition();
+    newEndPoints = new ArrayList<NodeEndPoint>();
+    nodesToDelete = new ArrayList<MemcachedNode>();
     nodesToShutdown = new ConcurrentLinkedQueue<MemcachedNode>();
     listenerExecutorService = f.getListenerExecutorService();
     this.bufSize = bufSize;
@@ -279,7 +331,17 @@ public class MemcachedConnection extends SpyThread {
     wakeupDelay = Integer.parseInt( System.getProperty("net.spy.wakeupDelay",
       Integer.toString(DEFAULT_WAKEUP_DELAY)));
 
-    List<MemcachedNode> connections = createConnections(a);
+    //This MemcachedConnection constructor is used in several places. 
+    //The conversion from SocketAddress to NodeEndPoint is done for backwards compatibility. 
+    List<NodeEndPoint> endPoints = new ArrayList<NodeEndPoint>(socketAddressList.size());
+    for(InetSocketAddress sa : socketAddressList){
+      InetAddress addr = sa.getAddress();
+      String ipAddress = (addr != null) ? addr.getHostAddress() : null;
+      NodeEndPoint endPoint = new NodeEndPoint(sa.getHostName(), ipAddress, sa.getPort());
+      endPoints.add(endPoint);
+    }
+    
+    List<MemcachedNode> connections = createConnections(endPoints);
     locator = f.createLocator(connections);
 
     metrics = f.getMetricCollector();
@@ -290,6 +352,40 @@ public class MemcachedConnection extends SpyThread {
     setName("Memcached IO over " + this);
     setDaemon(f.isDaemon());
     start();
+  }
+  
+  @Override
+  public void notifyUpdate(ClusterConfiguration clusterConfiguration){
+    if (shutDown) {
+      getLogger().info("Ignoring config updates as the client is shutting down");
+      return;
+    }
+    
+    if (clusterConfiguration == null) {
+      return;
+    }
+    lockForNodeUpdates.lock();
+    try{
+      newEndPoints.clear();
+      for(NodeEndPoint endPoint : clusterConfiguration.getCacheNodeEndPoints()){
+        newEndPoints.add(endPoint);
+      }
+      
+    }finally{
+      lockForNodeUpdates.unlock();
+    }
+    
+    Selector s = selector.wakeup();
+    assert s == selector : "Wakeup returned the wrong selector.";
+    
+    conditionLock.lock();
+    try{
+      try {
+        nodeUpdateCondition.await(50L, TimeUnit.SECONDS);
+      } catch (InterruptedException e) { }
+    }finally{
+      conditionLock.unlock();
+    }
   }
 
   /**
@@ -318,22 +414,21 @@ public class MemcachedConnection extends SpyThread {
     }
   }
 
-  /**
-   * Create connections for the given list of addresses.
-   *
-   * @param addrs the list of addresses to connect to.
-   * @return addrs list of {@link MemcachedNode}s.
-   * @throws IOException if connecting was not successful.
-   */
+  protected MemcachedNode createConnection(final NodeEndPoint endPoint) throws IOException {
+    return createConnections(Collections.singletonList(endPoint)).get(0);
+  }
+    
   protected List<MemcachedNode> createConnections(
-    final Collection<InetSocketAddress> addrs) throws IOException {
-    List<MemcachedNode> connections = new ArrayList<MemcachedNode>(addrs.size());
-
-    for (SocketAddress sa : addrs) {
+      final Collection<NodeEndPoint> endPoints) throws IOException {
+    List<MemcachedNode> connections = new ArrayList<MemcachedNode>(endPoints.size());
+    
+    for (NodeEndPoint endPoint : endPoints) {
+      SocketAddress sa = endPoint.getInetSocketAddress();
       SocketChannel ch = SocketChannel.open();
       ch.configureBlocking(false);
-      MemcachedNode qa = connectionFactory.createMemcachedNode(sa, ch, bufSize);
-      qa.setConnection(this);
+      MemcachedNode qa =
+          this.connectionFactory.createMemcachedNode(sa, ch, bufSize);
+      qa.setNodeEndPoint(endPoint);
       int ops = 0;
       ch.socket().setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
 
@@ -513,16 +608,7 @@ public class MemcachedConnection extends SpyThread {
       if (!addedQueue.contains(qa)) {
         nodesToShutdown.remove(qa);
         metrics.decrementCounter(SHUTD_QUEUE_METRIC);
-        Collection<Operation> notCompletedOperations = qa.destroyInputQueue();
-        if (qa.getChannel() != null) {
-          qa.getChannel().close();
-          qa.setSk(null);
-          if (qa.getBytesRemainingToWrite() > 0) {
-            getLogger().warn("Shut down with %d bytes remaining to write",
-              qa.getBytesRemainingToWrite());
-          }
-          getLogger().debug("Shut down channel %s", qa.getChannel());
-        }
+        Collection<Operation> notCompletedOperations = shutdownNode(qa);
         redistributeOperations(notCompletedOperations);
       }
     }
@@ -532,14 +618,18 @@ public class MemcachedConnection extends SpyThread {
    * Check if one or more nodes exceeded the timeout Threshold.
    */
   private void checkPotentiallyTimedOutConnection() {
+    updateNodeList();
+    Collection<MemcachedNode> nodes = locator.getAll();
     boolean stillCheckingTimeouts = true;
     while (stillCheckingTimeouts) {
       try {
         for (SelectionKey sk : selector.keys()) {
           MemcachedNode mn = (MemcachedNode) sk.attachment();
-          if (mn.getContinuousTimeout() > timeoutExceptionThreshold) {
-            getLogger().warn("%s exceeded continuous timeout threshold", sk);
-            lostConnection(mn);
+          if(nodes.contains(mn)){
+            if (mn.getContinuousTimeout() > timeoutExceptionThreshold) {
+              getLogger().warn("%s exceeded continuous timeout threshold", sk);
+              lostConnection(mn);
+            }
           }
         }
         stillCheckingTimeouts = false;
@@ -549,6 +639,110 @@ public class MemcachedConnection extends SpyThread {
         continue;
       }
     }
+  }
+
+  private void updateNodeList(){
+    List<NodeEndPoint> endPoints = new ArrayList<NodeEndPoint>();
+    try{
+      lockForNodeUpdates.lock();
+      if(newEndPoints.size() == 0){
+        return;
+      }
+      endPoints.addAll(newEndPoints);
+      newEndPoints.clear();
+    }finally{
+      lockForNodeUpdates.unlock();
+    }
+
+    try {
+      List<MemcachedNode> currentNodes = new ArrayList<MemcachedNode>(locator.getAll());
+      List<MemcachedNode> newNodes = new ArrayList<MemcachedNode>();
+      
+      for(NodeEndPoint newEndPoint : endPoints){
+        Iterator<MemcachedNode> curentNodesIterator = currentNodes.iterator();
+        boolean foundMatch = false;
+        while(curentNodesIterator.hasNext()){
+          MemcachedNode currentNode = curentNodesIterator.next();
+          NodeEndPoint endPointFromCurrentNode = currentNode.getNodeEndPoint();
+          
+          if(endPointFromCurrentNode.getHostName().equals(newEndPoint.getHostName()) &&
+               endPointFromCurrentNode.getPort() == newEndPoint.getPort()){
+          
+            //Reconnect if the Ip address changes for the hostname.
+            //1) ip address do not match
+            //2) current ip address is null and the new config has a ip address. 
+            if( (endPointFromCurrentNode.getIpAddress() != null  &&  !endPointFromCurrentNode.getIpAddress().equals(newEndPoint.getIpAddress()))
+               ||
+               (endPointFromCurrentNode.getIpAddress() == null  && newEndPoint.getIpAddress() != null)
+              ){
+              currentNode.setNodeEndPoint(newEndPoint);
+              queueReconnect(currentNode);
+            }
+            
+            newNodes.add(currentNode);
+            //Removing the node from currentNode list because of the match.
+            //This removal process will eventually the list with nodes to delete.
+            curentNodesIterator.remove();
+            foundMatch = true;
+            break;
+          }
+        }
+        
+        //No match. The end point is new.  
+        if(!foundMatch){
+          MemcachedNode node = createConnection(newEndPoint);
+          newNodes.add(node);
+        }
+      }
+      
+      //currentNodes list is left with the nodes to delete after finishing the above matching process.
+      if(currentNodes.size() > 0){
+        Collection<Operation> opsToRequeue = new ArrayList<Operation>();
+        for(MemcachedNode qa : currentNodes){
+          Collection<Operation> pendingOps = shutdownNode(qa);
+          opsToRequeue.addAll(pendingOps);
+        }
+        redistributeOperations(opsToRequeue);
+        opsToRequeue.clear();
+      }
+      
+      locator.updateLocator(newNodes);
+      
+    }catch(Exception e){
+      getLogger().error("Error encountered while updating the node list. Adding back to endpoint list for reattempt.", e);
+      //Error occurred during node update. Add back the endpoints list to newEndPoints
+      //for retrying node updates in next attempt.
+      try{
+        lockForNodeUpdates.lock();
+        if(newEndPoints.size() == 0){
+          newEndPoints.addAll(endPoints);
+        }
+      }finally{
+        lockForNodeUpdates.unlock();
+      }
+    }
+  
+    conditionLock.lock();
+    try {
+        nodeUpdateCondition.signal();
+    }finally{
+      conditionLock.unlock();
+    }
+  }
+  
+  private Collection<Operation> shutdownNode(MemcachedNode node) throws IOException{
+    Collection<Operation> notCompletedOperations = node.destroyInputQueue();
+    if (node.getChannel() != null) {
+      node.getChannel().close();
+      node.setSk(null);
+      if (node.getBytesRemainingToWrite() > 0) {
+        getLogger().warn("Shut down with %d bytes remaining to write",
+            node.getBytesRemainingToWrite());
+      }
+      getLogger().debug("Shut down channel %s", node.getChannel());
+    }
+    
+    return notCompletedOperations;
   }
 
   /**
@@ -565,7 +759,12 @@ public class MemcachedConnection extends SpyThread {
         todo.add(qaNode);
       }
 
-      for (MemcachedNode node : todo) {
+      Collection<MemcachedNode> nodeList = locator.getAll();
+      // Now process the queue.
+      for (MemcachedNode qa : todo) {
+        if(!nodeList.contains(qa)){
+          continue;
+        }
         boolean readyForIO = false;
         if (node.isActive()) {
           if (node.getCurrentWriteOp() != null) {
@@ -665,8 +864,12 @@ public class MemcachedConnection extends SpyThread {
    * @param sk the selector to handle IO against.
    */
   private void handleIO(final SelectionKey sk) {
-    MemcachedNode node = (MemcachedNode) sk.attachment();
-
+    MemcachedNode qa = (MemcachedNode) sk.attachment();
+    Collection<MemcachedNode> nodeList = locator.getAll();
+    if(!nodeList.contains(qa)){
+      return; 
+    }
+    
     try {
       getLogger().debug("Handling IO for:  %s (r=%s, w=%s, c=%s, op=%s)", sk,
         sk.isReadable(), sk.isWritable(), sk.isConnectable(),
@@ -1117,9 +1320,13 @@ public class MemcachedConnection extends SpyThread {
           ch.configureBlocking(false);
           ch.socket().setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
           int ops = 0;
-          if (ch.connect(node.getSocketAddress())) {
-            connected(node);
-            addedQueue.offer(node);
+          SocketAddress sa;
+          if(node.getNodeEndPoint() != null){
+            sa = node.getNodeEndPoint().getInetSocketAddress(true);
+          }else{
+            sa = node.getSocketAddress();
+          }
+          if (ch.connect(sa)) {
             getLogger().info("Immediately reconnected to %s", node);
             assert ch.isConnected();
           } else {
@@ -1184,7 +1391,12 @@ public class MemcachedConnection extends SpyThread {
     StringUtils.validateKey(key, opFact instanceof BinaryOperationFactory);
     addOperation(key, o);
   }
-
+  
+  public void enqueueOperation(InetSocketAddress addr, Operation o) {
+    checkState();
+    addOperation(addr, o);
+  }
+  
   /**
    * Add an operation to a connection identified by the given key.
    *
@@ -1230,6 +1442,31 @@ public class MemcachedConnection extends SpyThread {
     } else {
       assert o.isCancelled() : "No node found for " + key + " (and not "
         + "immediately cancelled)";
+    }
+  }
+  
+  protected void addOperation(final InetSocketAddress addr, final Operation o) {
+
+    Collection<MemcachedNode> nodes = locator.getAll();
+    boolean foundNode = false;
+    for(MemcachedNode node : nodes){
+      NodeEndPoint endpoint = node.getNodeEndPoint();
+      String hostName = addr.getHostName();
+      String ipAddress = null;
+      if(addr.getAddress() != null){
+        ipAddress = addr.getAddress().getHostAddress();
+      }
+      
+      if((hostName != null && hostName.equals(endpoint.getHostName()))
+          || (ipAddress != null && ipAddress.equals(endpoint.getIpAddress())) ){
+        addOperation(node, o);
+        foundNode = true;
+        break;
+      }
+    }
+    
+    if(!foundNode){
+      throw new IllegalArgumentException("The specified address does not belong to the cluster");
     }
   }
 

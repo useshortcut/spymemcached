@@ -69,6 +69,11 @@ public class DefaultConnectionFactory extends SpyObject implements
     ConnectionFactory {
 
   /**
+   * Default client mode.
+   */
+  public static final ClientMode DEFAULT_CLIENT_MODE = ClientMode.Dynamic;
+  
+  /**
    * Default failure mode.
    */
   public static final FailureMode DEFAULT_FAILURE_MODE =
@@ -102,7 +107,7 @@ public class DefaultConnectionFactory extends SpyObject implements
   /**
    * Default operation timeout in milliseconds.
    */
-  public static final long DEFAULT_OPERATION_TIMEOUT = 2500;
+  public static final long DEFAULT_OPERATION_TIMEOUT = 2500; //2500000;
 
   /**
    * Maximum amount of time (in seconds) to wait between reconnect attempts.
@@ -125,6 +130,7 @@ public class DefaultConnectionFactory extends SpyObject implements
    */
   public static final long DEFAULT_AUTH_WAIT_TIME = 1000;
 
+  private final ClientMode clientMode;
   protected final int opQueueLen;
   private final int readBufSize;
   private final HashAlgorithm hashAlg;
@@ -143,12 +149,21 @@ public class DefaultConnectionFactory extends SpyObject implements
    * @param bufSize the buffer size
    * @param hash the algorithm to use for hashing
    */
-  public DefaultConnectionFactory(int qLen, int bufSize, HashAlgorithm hash) {
+  public DefaultConnectionFactory(ClientMode clientMode, int qLen, int bufSize, HashAlgorithm hash) {
     super();
-    opQueueLen = qLen;
-    readBufSize = bufSize;
-    hashAlg = hash;
-    metrics = null;
+    this.clientMode = clientMode;
+    this.opQueueLen = qLen;
+    this.readBufSize = bufSize;
+    this.hashAlg = hash;
+    this.metrics = null;
+  }
+
+  /**
+   * Create a DefaultConnectionFactory with the given maximum operation queue
+   * length, and the given read buffer size.
+   */
+  public DefaultConnectionFactory(ClientMode clientMode, int qLen, int bufSize) {
+    this(clientMode, qLen, bufSize, DEFAULT_HASH);
   }
 
   /**
@@ -156,14 +171,26 @@ public class DefaultConnectionFactory extends SpyObject implements
    * length, and the given read buffer size.
    */
   public DefaultConnectionFactory(int qLen, int bufSize) {
-    this(qLen, bufSize, DEFAULT_HASH);
+    this(ClientMode.Dynamic, qLen, bufSize, DEFAULT_HASH);
   }
 
   /**
    * Create a DefaultConnectionFactory with the default parameters.
    */
+  public DefaultConnectionFactory(ClientMode clientMode) {
+    this(clientMode, DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE);
+  }
+
   public DefaultConnectionFactory() {
-    this(DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE);
+    this(DEFAULT_CLIENT_MODE, DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE);
+  }
+
+  public ClientMode getClientMode(){
+    return clientMode;
+  }
+  
+  public long getDynamicModePollingInterval(){
+    return ConfigurationPoller.DEFAULT_POLL_INTERVAL;
   }
 
   public MemcachedNode createMemcachedNode(SocketAddress sa, SocketChannel c,

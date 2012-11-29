@@ -154,6 +154,7 @@ public final class KetamaNodeLocator extends SpyObject implements NodeLocator {
   public void updateLocator(List<MemcachedNode> nodes) {
     allNodes = nodes;
     setKetamaNodes(nodes);
+    allNodes = nodes;
   }
 
   /**
