@@ -4,7 +4,7 @@ Amazon ElastiCache Cluster Client is an enhanced Java library to connect to Elas
 
 # Building
 
-AmazonElastiCacheClusterClient can be compiled using Apache Ant by running the following
+Amazon ElastiCache Cluster Client can be compiled using Apache Ant by running the following
 command:
 
     ant
