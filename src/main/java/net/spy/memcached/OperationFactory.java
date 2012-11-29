@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -31,9 +42,12 @@ import javax.security.auth.callback.CallbackHandler;
 import net.spy.memcached.ops.CASOperation;
 import net.spy.memcached.ops.ConcatenationOperation;
 import net.spy.memcached.ops.ConcatenationType;
+import net.spy.memcached.ops.ConfigurationType;
+import net.spy.memcached.ops.DeleteConfigOperation;
 import net.spy.memcached.ops.DeleteOperation;
 import net.spy.memcached.ops.FlushOperation;
 import net.spy.memcached.ops.GetAndTouchOperation;
+import net.spy.memcached.ops.GetConfigOperation;
 import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.GetsOperation;
@@ -46,6 +60,7 @@ import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.SASLAuthOperation;
 import net.spy.memcached.ops.SASLMechsOperation;
 import net.spy.memcached.ops.SASLStepOperation;
+import net.spy.memcached.ops.SetConfigOperation;
 import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.ops.StoreOperation;
 import net.spy.memcached.ops.StoreType;
@@ -146,6 +161,35 @@ public interface OperationFactory {
    * @return a new GetOperation
    */
   GetOperation get(Collection<String> keys, GetOperation.Callback cb);
+
+  /**
+   * Create a getConfig operation.
+   *
+   * @param type the config type to get
+   * @param cb the callback that will contain the results
+   * @return a new GetConfigOperation
+   */
+  GetConfigOperation getConfig(ConfigurationType type, GetConfigOperation.Callback cb);
+  
+  /**
+   * Create a setConfig operation.
+   *
+   * @param type the config type to set
+   * @param flags the config flags
+   * @param data the data
+   * @param cb the status callback
+   * @return a new SetConfigOperation
+   */
+  SetConfigOperation setConfig(ConfigurationType type, int flags, byte[] data, OperationCallback cb);
+  
+  /**
+   * Create a deletion operation for config.
+   *
+   * @param type the configuration type to delete
+   * @param operationCallback the status callback
+   * @return the new DeleteConfigOperation
+   */
+  DeleteConfigOperation deleteConfig(ConfigurationType type, OperationCallback operationCallback);
 
   /**
    * Create a mutator operation.

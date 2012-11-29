@@ -19,17 +19,30 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Collection;
 
+import net.spy.memcached.config.NodeEndPoint;
 import net.spy.memcached.ops.Operation;
 
 /**
@@ -134,7 +147,18 @@ public interface MemcachedNode {
    * Get the SocketAddress of the server to which this node is connected.
    */
   SocketAddress getSocketAddress();
-
+  
+  /**
+   * Get NodeEndPoint
+   * @return
+   */
+  NodeEndPoint getNodeEndPoint();
+  
+  /**
+   * Set NodeEndPoint
+   */
+  void setNodeEndPoint(NodeEndPoint endPoint);
+  
   /**
    * True if this node is <q>active.</q> i.e. is is currently connected and
    * expected to be able to process requests

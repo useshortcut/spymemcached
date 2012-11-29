@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached.protocol.ascii;
@@ -33,9 +44,12 @@ import net.spy.memcached.ops.BaseOperationFactory;
 import net.spy.memcached.ops.CASOperation;
 import net.spy.memcached.ops.ConcatenationOperation;
 import net.spy.memcached.ops.ConcatenationType;
+import net.spy.memcached.ops.ConfigurationType;
+import net.spy.memcached.ops.DeleteConfigOperation;
 import net.spy.memcached.ops.DeleteOperation;
 import net.spy.memcached.ops.FlushOperation;
 import net.spy.memcached.ops.GetAndTouchOperation;
+import net.spy.memcached.ops.GetConfigOperation;
 import net.spy.memcached.ops.GetOperation;
 import net.spy.memcached.ops.GetlOperation;
 import net.spy.memcached.ops.GetsOperation;
@@ -46,10 +60,10 @@ import net.spy.memcached.ops.MutatorOperation;
 import net.spy.memcached.ops.NoopOperation;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.ops.OperationCallback;
-
 import net.spy.memcached.ops.SASLAuthOperation;
 import net.spy.memcached.ops.SASLMechsOperation;
 import net.spy.memcached.ops.SASLStepOperation;
+import net.spy.memcached.ops.SetConfigOperation;
 import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.ops.StoreOperation;
 import net.spy.memcached.ops.StoreType;
@@ -97,6 +111,18 @@ public class AsciiOperationFactory extends BaseOperationFactory {
 
   public GetsOperation gets(String key, GetsOperation.Callback cb) {
     return new GetsOperationImpl(key, cb);
+  }
+
+  public GetConfigOperation getConfig(ConfigurationType type, GetConfigOperation.Callback cb) {
+    return new GetConfigOperationImpl(type, cb);
+  }
+  
+  public SetConfigOperation setConfig(ConfigurationType type, int flags, byte[] data, OperationCallback cb){
+    return new SetConfigOperationImpl(type, flags, data, cb);
+  }
+
+  public DeleteConfigOperation deleteConfig(ConfigurationType type, OperationCallback cb) {
+    return new DeleteConfigOperationImpl(type, cb);
   }
 
   public MutatorOperation mutate(Mutator m, String key, long by, long exp,
@@ -191,4 +217,5 @@ public class AsciiOperationFactory extends BaseOperationFactory {
     throw new UnsupportedOperationException("Tap is not supported for ASCII"
         + " protocol");
   }
+
 }

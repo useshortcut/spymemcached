@@ -1,6 +1,6 @@
 # Building
 
-Spymemcached can be compiled using Apache Ant by running the following
+AmazonElastiCacheClusterClient can be compiled using Apache Ant by running the following
 command:
 
     ant
@@ -8,20 +8,13 @@ command:
 This will generate binary, source, and javadoc jars in the build
 directory of the project.
 
-To run the Spymemcached tests against Membase Server run the
-following command:
-
-    ant test -Dserver.type=membase
-
-To test Spymemcached against Membase running on a different host
-use the following command:
-
-    ant test -Dserver.type=membase \
-        -Dserver.address_v4=ip_address_of_membase
+More test info will be updated shortly.
 
 # Testing
 
-The latest version of spymemcached has a set of command line arguments
+_Note: The ant test target is in the process of being updated to run the additional tests written for Auto Discovery._
+
+The latest version of AmazonElastiCacheClusterClient has a set of command line arguments
 that can be used to configure the location of your testing server. The
 arguments are listed below.
 
@@ -29,12 +22,6 @@ arguments are listed below.
 
 This argument is used to specify the ipv4 address of your testing
 server. By default it is set to localhost.
-
-    -Dserver.address_v6=ipv6_address_of_testing_server
-
-This argument is used to set the ipv6 address of your testing server.
-By default it is set to ::1. If an ipv6 address is specified then an
-ipv4 address must be specified otherwise there may be test failures.
 
     -Dserver.port_number=port_number_of_memcached
 
@@ -46,11 +33,13 @@ This argument is used when memcahched is started on a port other than
 This argument is used for CI testing where certain unit tests might
 be temporarily failing.
 
-# More Information
+# More Information for Amazon ElastiCache Cluster Client
+Github link: https://github.com/amazonwebservices/aws-elasticache-cluster-client-memcached-for-java
+This repository is a fork of the spymemcached Java client for connecting to memcached (specifically the https://github.com/dustin/java-memcached-client repo).
+
+Additional changes have been made to support Amazon ElastiCache Auto Discovery. To read more about Auto Discovery, please go here: http://docs.amazonwebservices.com/AmazonElastiCache/latest/UserGuide/AutoDiscovery.html.
 
 For more information about Spymemcached see the links below:
-
-## Project Page The
 
 [Spymemcached Project Home](http://code.google.com/p/spymemcached/)
 contains a wiki, issue tracker, and downloads section.

@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -35,18 +46,39 @@ import net.spy.memcached.protocol.binary.BinaryOperationFactory;
 public class BinaryConnectionFactory extends DefaultConnectionFactory {
 
   /**
-   * Create a DefaultConnectionFactory with the default parameters.
+   * Create a BinaryConnectionFactory with the default parameters.
    */
   public BinaryConnectionFactory() {
     super();
   }
+  
+  /**
+   * Create a BinaryConnectionFactory with the given clientMode.
+   * @param clientMode
+   */
+  public BinaryConnectionFactory(ClientMode clientMode){
+    super(clientMode);
+  }
 
   /**
-   * Create a BinaryConnectionFactory with the given maximum operation queue
-   * length, and the given read buffer size.
+   * Create a BinaryConnectionFactory with the given parameters
+   * 
+   * @param len the queue length.
+   * @param bufSize the buffer size
    */
   public BinaryConnectionFactory(int len, int bufSize) {
-    super(len, bufSize);
+    super(ClientMode.Dynamic, len, bufSize);
+  }
+
+  /**
+   * Create a BinaryConnectionFactory with the given parameters
+   * 
+   * @param clientMode the mode of the client to indicate whether dynamic server list management is done.
+   * @param len the queue length.
+   * @param bufSize the buffer size
+   */
+  public BinaryConnectionFactory(ClientMode clientMode, int len, int bufSize) {
+    super(clientMode, len, bufSize);
   }
 
   /**
@@ -57,7 +89,19 @@ public class BinaryConnectionFactory extends DefaultConnectionFactory {
    * @param hash the algorithm to use for hashing
    */
   public BinaryConnectionFactory(int len, int bufSize, HashAlgorithm hash) {
-    super(len, bufSize, hash);
+    super(ClientMode.Dynamic, len, bufSize, hash);
+  }
+
+  /**
+   * Construct a BinaryConnectionFactory with the given parameters.
+   *
+   * @param clientMode the mode of the client to indicate whether dynamic server list management is done.
+   * @param len the queue length.
+   * @param bufSize the buffer size
+   * @param hash the algorithm to use for hashing
+   */
+  public BinaryConnectionFactory(ClientMode clientMode, int len, int bufSize, HashAlgorithm hash) {
+    super(clientMode, len, bufSize, hash);
   }
 
   @Override

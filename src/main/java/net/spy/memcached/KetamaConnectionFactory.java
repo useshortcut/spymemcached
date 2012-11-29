@@ -18,6 +18,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -47,16 +58,16 @@ public class KetamaConnectionFactory extends DefaultConnectionFactory {
    * @param opQueueMaxBlockTime the maximum time to block waiting for op
    *        queue operations to complete, in milliseconds
    */
-  public KetamaConnectionFactory(int qLen, int bufSize,
+  public KetamaConnectionFactory(ClientMode clientMode, int qLen, int bufSize,
       long opQueueMaxBlockTime) {
-    super(qLen, bufSize, DefaultHashAlgorithm.KETAMA_HASH);
+    super(clientMode, qLen, bufSize, DefaultHashAlgorithm.KETAMA_HASH);
   }
 
   /**
    * Create a KetamaConnectionFactory with the default parameters.
    */
   public KetamaConnectionFactory() {
-    this(DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE,
+    this(DEFAULT_CLIENT_MODE, DEFAULT_OP_QUEUE_LEN, DEFAULT_READ_BUFFER_SIZE,
         DEFAULT_OP_QUEUE_MAX_BLOCK_TIME);
   }
 
