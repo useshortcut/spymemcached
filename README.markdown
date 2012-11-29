@@ -18,7 +18,7 @@ More test info will be updated shortly.
 
 _Note: The ant test target is in the process of being updated to run the additional tests written for Auto Discovery._
 
-The latest version of AmazonElastiCacheClusterClient has a set of command line arguments
+The latest version of Amazon ElastiCache Cluster Client has a set of command line arguments
 that can be used to configure the location of your testing server. The
 arguments are listed below.
 
