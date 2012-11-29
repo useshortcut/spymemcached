@@ -1,3 +1,7 @@
+# Amazon ElastiCache Cluster Client
+
+Amazon ElastiCache Cluster Client is an enhanced Java library to connect to ElastiCache clusters. This client library has been built upon Spymemcached and is released under the [Amazon Software License](http://aws.amazon.com/asl/).
+
 # Building
 
 AmazonElastiCacheClusterClient can be compiled using Apache Ant by running the following
@@ -39,18 +43,7 @@ This repository is a fork of the spymemcached Java client for connecting to memc
 
 Additional changes have been made to support Amazon ElastiCache Auto Discovery. To read more about Auto Discovery, please go here: http://docs.amazonwebservices.com/AmazonElastiCache/latest/UserGuide/AutoDiscovery.html.
 
-For more information about Spymemcached see the links below:
+For more information about Spymemcached see the link below:
 
 [Spymemcached Project Home](http://code.google.com/p/spymemcached/)
 contains a wiki, issue tracker, and downloads section.
-
-## Github
-
-[The gitub page](http://github.com/dustin/java-memcached-client)
-contains the latest Spymemcached source.
-
-## Couchbase.org
-
-At [couchbase.org](http://www.couchbase.org/code/couchbase/java) you
-can find a download's section for the latest release as well as an
-extensive tutorial to help new users learn how to use Spymemcached.
