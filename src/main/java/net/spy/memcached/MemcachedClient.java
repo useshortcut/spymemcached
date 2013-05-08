@@ -298,16 +298,21 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
       throws IOException{
     configurationNode = new NodeEndPoint(configurationEndPoint.getHostName(), configurationEndPoint.getPort());
     setupConnection(cf, Collections.singletonList(configurationEndPoint));
-    
-    String configResult;
+    boolean checkKey = false;
+    String configResult = null;
     try{
       try{
         //GetConfig
         configResult = (String)this.getConfig(configurationEndPoint, ConfigurationType.CLUSTER, configTranscoder);
       }catch(OperationNotSupportedException e){
-        
+        checkKey = true;
+      }
+
+      if(checkKey || configResult == null || configResult.trim().isEmpty()){
         configResult = (String)this.get(configurationEndPoint, ConfigurationType.CLUSTER.getValueWithNameSpace(), configTranscoder);
-        isConfigurationProtocolSupported = false;
+        if(configResult != null && ! configResult.trim().isEmpty()){
+          isConfigurationProtocolSupported = false;
+        }
       }
       
       if(configResult != null && ! configResult.trim().isEmpty()){
