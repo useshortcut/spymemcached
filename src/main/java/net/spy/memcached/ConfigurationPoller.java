@@ -115,6 +115,13 @@ public class ConfigurationPoller extends SpyThread{
               newConfigResponse = (String)client.getConfig(socketAddressToGetConfig, 
                                                                                          ConfigurationType.CLUSTER,
                                                                                          configTranscoder);
+              if(newConfigResponse == null || newConfigResponse.trim().isEmpty()){
+                newConfigResponse = (String)client.get(socketAddressToGetConfig, ConfigurationType.CLUSTER.getValueWithNameSpace(), configTranscoder);
+                if(newConfigResponse != null && ! newConfigResponse.trim().isEmpty()){
+                  client.setIsConfigurationProtocolSupported(false);
+                }
+              }
+
             }catch(OperationNotSupportedException e){
               //Fallback to key based config access.
               client.setIsConfigurationProtocolSupported(false);
