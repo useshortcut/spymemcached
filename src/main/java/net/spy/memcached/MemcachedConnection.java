@@ -1180,7 +1180,7 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
     node.setChannel(null);
 
     long delay = (long) Math.min(maxDelay, Math.pow(2,
-        node.getReconnectCount())) * 1000;
+        node.getReconnectCount()) * 1000);
     long reconnectTime = System.currentTimeMillis() + delay;
     while (reconnectQueue.containsKey(reconnectTime)) {
       reconnectTime++;
