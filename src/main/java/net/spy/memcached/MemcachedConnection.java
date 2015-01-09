@@ -1638,7 +1638,10 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
   }
 
   /**
-   * Set the continous timeout on an operation.
+   * Set the continuous timeout on an operation.
+   *
+   * Ignore operations which have no handling nodes set yet (which may happen before nodes are properly
+   * authenticated).
    *
    * @param op the operation to use.
    * @param isTimeout is timed out or not.
@@ -1652,9 +1655,7 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
       }
 
       MemcachedNode node = op.getHandlingNode();
-      if (node == null) {
-        logger.warn("handling node for operation is not set");
-      } else {
+      if (node != null) {
         node.setContinuousTimeout(isTimeout);
       }
     } catch (Exception e) {
