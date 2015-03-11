@@ -34,11 +34,6 @@
 
 package net.spy.memcached;
 
-import java.util.Collection;
-import java.util.Map;
-
-import javax.security.auth.callback.CallbackHandler;
-
 import net.spy.memcached.ops.CASOperation;
 import net.spy.memcached.ops.ConcatenationOperation;
 import net.spy.memcached.ops.ConcatenationType;
@@ -68,10 +63,15 @@ import net.spy.memcached.ops.StatsOperation;
 import net.spy.memcached.ops.StoreOperation;
 import net.spy.memcached.ops.StoreType;
 import net.spy.memcached.ops.TapOperation;
+import net.spy.memcached.ops.TouchOperation;
 import net.spy.memcached.ops.UnlockOperation;
 import net.spy.memcached.ops.VersionOperation;
 import net.spy.memcached.tapmessage.RequestMessage;
 import net.spy.memcached.tapmessage.TapOpcode;
+
+import javax.security.auth.callback.CallbackHandler;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Factory that builds operations for protocol handlers.
@@ -291,7 +291,7 @@ public interface OperationFactory {
    * @param cb The status callback
    * @return A touch operation
    */
-  KeyedOperation touch(String key, int expiration, OperationCallback cb);
+  TouchOperation touch(String key, int expiration, OperationCallback cb);
 
   /**
    * Get a concatenation operation.
