@@ -143,6 +143,22 @@ public class DefaultConnectionFactory extends SpyObject implements
   private ExecutorService executorService;
 
   /**
+   *Construct a DefaultConnectionFactory with the given parameters.
+   *
+   * @param qLen the queue length.
+   * @param bufSize the buffer size
+   * @param hash the algorithm to use for hashing
+   */
+  public DefaultConnectionFactory(int qLen, int bufSize, HashAlgorithm hash) {
+    super();
+    clientMode = ClientMode.Dynamic;
+    opQueueLen = qLen;
+    readBufSize = bufSize;
+    hashAlg = hash;
+    metrics = null;
+  }
+
+  /**
    * Construct a DefaultConnectionFactory with the given parameters.
    *
    * @param qLen the queue length.

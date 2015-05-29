@@ -66,7 +66,9 @@ public class KetamaConnectionFactory extends DefaultConnectionFactory {
    */
   public KetamaConnectionFactory(ClientMode clientMode, int qLen, int bufSize,
       long opQueueMaxBlockTime) {
-    super(clientMode, qLen, bufSize, DefaultHashAlgorithm.KETAMA_HASH);
+      super(clientMode, qLen, bufSize, DefaultHashAlgorithm.KETAMA_HASH);
+      this.ketamaNodeKeyFormat = KetamaNodeKeyFormatter.Format.SPYMEMCACHED;
+      this.weights = new HashMap<InetSocketAddress, Integer>();
   }
     
   public KetamaConnectionFactory(int qLen, int bufSize,
