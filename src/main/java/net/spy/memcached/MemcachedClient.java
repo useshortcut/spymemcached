@@ -1265,7 +1265,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
   <T> GetFuture<T> asyncGet(InetSocketAddress sa, final String key, final Transcoder<T> tc) {
 
     final CountDownLatch latch = new CountDownLatch(1);
-    final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key);
+    final GetFuture<T> rv = new GetFuture<T>(latch, operationTimeout, key, executorService);
     Operation op = opFact.get(key, new GetOperation.Callback() {
       private Future<T> val = null;
 
@@ -1964,7 +1964,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
   public <T> GetConfigFuture<T> asyncGetConfig(InetSocketAddress addr, final ConfigurationType type, final Transcoder<T> tc) {
 
     final CountDownLatch latch = new CountDownLatch(1);
-    final GetConfigFuture<T> rv = new GetConfigFuture<T>(latch, operationTimeout, type);
+    final GetConfigFuture<T> rv = new GetConfigFuture<T>(latch, operationTimeout, type, executorService);
     Operation op = opFact.getConfig(type, new GetConfigOperation.Callback() {
       private Future<T> val = null;
 
@@ -2021,7 +2021,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
     CachedData co = tc.encode(value);
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Boolean> rv =
-        new OperationFuture<Boolean>(configurationType.getValue(), latch, operationTimeout);
+        new OperationFuture<Boolean>(configurationType.getValue(), latch, operationTimeout, executorService);
     Operation op = opFact.setConfig(configurationType, co.getFlags(), co.getData(),
         new OperationCallback() {
             public void receivedStatus(OperationStatus val) {
@@ -2049,7 +2049,7 @@ public class MemcachedClient extends SpyObject implements MemcachedClientIF,
   public OperationFuture<Boolean> deleteConfig(InetSocketAddress addr, ConfigurationType configurationType) {
     final CountDownLatch latch = new CountDownLatch(1);
     final OperationFuture<Boolean> rv = new OperationFuture<Boolean>(configurationType.getValue(),
-        latch, operationTimeout);
+        latch, operationTimeout, executorService);
     DeleteConfigOperation op = opFact.deleteConfig(configurationType, new OperationCallback() {
       public void receivedStatus(OperationStatus s) {
         rv.set(s.isSuccess(), s);

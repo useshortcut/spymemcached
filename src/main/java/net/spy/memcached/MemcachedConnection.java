@@ -761,8 +761,8 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
 
       Collection<MemcachedNode> nodeList = locator.getAll();
       // Now process the queue.
-      for (MemcachedNode qa : todo) {
-        if(!nodeList.contains(qa)){
+      for (MemcachedNode node : todo) {
+        if(!nodeList.contains(node)){
           continue;
         }
         boolean readyForIO = false;
@@ -864,9 +864,9 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
    * @param sk the selector to handle IO against.
    */
   private void handleIO(final SelectionKey sk) {
-    MemcachedNode qa = (MemcachedNode) sk.attachment();
+    MemcachedNode node = (MemcachedNode) sk.attachment();
     Collection<MemcachedNode> nodeList = locator.getAll();
-    if(!nodeList.contains(qa)){
+    if(!nodeList.contains(node)){
       return; 
     }
     
@@ -1327,6 +1327,8 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
             sa = node.getSocketAddress();
           }
           if (ch.connect(sa)) {
+            connected(node);
+            addedQueue.offer(node);
             getLogger().info("Immediately reconnected to %s", node);
             assert ch.isConnected();
           } else {
