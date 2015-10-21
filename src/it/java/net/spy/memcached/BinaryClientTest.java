@@ -19,27 +19,54 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
-
 package net.spy.memcached;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.StatusCode;
+
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This test assumes a binary server is running on the host specified int the
  * environment variable SPYMC_TEST_SERVER_V4 or localhost:11211 by default.
  */
+@Category(StandardTests.class)
 public class BinaryClientTest extends ProtocolBaseCase {
 
   @Override
   protected void initClient() throws Exception {
     initClient(new BinaryConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
       @Override
       public long getOperationTimeout() {
         return 15000;
@@ -58,6 +85,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
         TestConfig.PORT_NUMBER));
   }
 
+  @Test
   public void testDeleteWithCAS() throws Exception {
     final String key = "delete.with.cas";
     final long wrongCAS = 1234;
@@ -70,6 +98,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertNull(client.get(key));
   }
 
+  @Test
   public void testCASAppendFail() throws Exception {
     final String key = "append.key";
     assertTrue(client.set(key, 5, "test").get());
@@ -78,36 +107,40 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertEquals("test", client.get(key));
   }
 
+  @Test
   public void testCASAppendSuccess() throws Exception {
     final String key = "append.key";
     assertTrue(client.set(key, 5, "test").get());
     CASValue<Object> casv = client.gets(key);
-    assertTrue(client.append(casv.getCas(), key, "es").get());
-    assertEquals("testes", client.get(key));
+    assertTrue(client.append(casv.getCas(), key, "ing").get());
+    assertEquals("testing", client.get(key));
   }
 
+  @Test
   public void testCASPrependFail() throws Exception {
     final String key = "append.key";
     assertTrue(client.set(key, 5, "test").get());
     CASValue<Object> casv = client.gets(key);
-    assertFalse(client.prepend(casv.getCas() + 1, key, "es").get());
+    assertFalse(client.prepend(casv.getCas() + 1, key, "ing").get());
     assertEquals("test", client.get(key));
   }
 
+  @Test
   public void testCASPrependSuccess() throws Exception {
     final String key = "append.key";
     assertTrue(client.set(key, 5, "test").get());
     CASValue<Object> casv = client.gets(key);
-    assertTrue(client.prepend(casv.getCas(), key, "es").get());
-    assertEquals("estest", client.get(key));
+    assertTrue(client.prepend(casv.getCas(), key, "pre").get());
+    assertEquals("pretest", client.get(key));
   }
 
+  @Test
   public void testAsyncCASResponse() {
     String key = "testAsyncCASResponse";
     client.set(key, 300, key + "0");
     CASValue<Object> getsRes = client.gets(key);
     OperationFuture<CASResponse> casRes = client.asyncCAS(key, getsRes.getCas(),
-      key + "1");
+        key + "1");
     try {
       casRes.get();
       assertNotNull("OperationFuture is missing cas value.", casRes.getCas());
@@ -119,6 +152,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertNotNull(casRes.getCas());
   }
 
+  @Test
   public void testAsyncCASWithExpiration() throws Exception {
     final String key = "casWithExpiration";
     final String value = "value";
@@ -127,11 +161,31 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertTrue(future.get());
 
     OperationFuture<CASResponse> casFuture =
-      client.asyncCAS(key, future.getCas(), 2, value);
+        client.asyncCAS(key, future.getCas(), 2, value);
     assertEquals(CASResponse.OK, casFuture.get());
 
     Thread.sleep(2500);
     assertNull(client.get(key));
+  }
+
+  @Override
+  protected void syncGetTimeoutsInitClient() throws Exception {
+    initClient(new BinaryConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
+      @Override
+      public long getOperationTimeout() {
+        return 2;
+      }
+
+      @Override
+      public int getTimeoutExceptionThreshold() {
+        return 1000000;
+      }
+    });
   }
 
   @Override
@@ -170,21 +224,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertTrue(bulkReturn.size() >= 1);
   }
 
-  @Override
-  protected void syncGetTimeoutsInitClient() throws Exception {
-    initClient(new BinaryConnectionFactory() {
-      @Override
-      public long getOperationTimeout() {
-        return 2;
-      }
-
-      @Override
-      public int getTimeoutExceptionThreshold() {
-        return 1000000;
-      }
-    });
-  }
-
+  @Test
   public void testAddGetSetStatusCodes() throws Exception {
     OperationFuture<Boolean> set = client.set("statusCode1", 0, "value");
     set.get();
@@ -199,6 +239,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertEquals(StatusCode.ERR_EXISTS, add.getStatus().getStatusCode());
   }
 
+  @Test
   public void testAsyncIncrementWithDefault() throws Exception {
     String k = "async-incr-with-default";
     OperationFuture<Long> f = client.asyncIncr(k, 1, 5);
@@ -210,6 +251,7 @@ public class BinaryClientTest extends ProtocolBaseCase {
     assertEquals(6, (long) f.get());
   }
 
+  @Test
   public void testAsyncDecrementWithDefault() throws Exception {
     String k = "async-decr-with-default";
     OperationFuture<Long> f = client.asyncDecr(k, 4, 10);

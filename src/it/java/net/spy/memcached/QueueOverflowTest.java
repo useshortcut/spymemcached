@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ *
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -36,11 +47,19 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.ops.Operation;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test queue overflow.
  */
+@Category(StandardTests.class)
 public class QueueOverflowTest extends ClientBaseCase {
 
   @Override
@@ -51,6 +70,11 @@ public class QueueOverflowTest extends ClientBaseCase {
     // functional after such conditions occur.
     initClient(new DefaultConnectionFactory(5, 1024) {
       @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
+      @Override
       public MemcachedConnection
       createConnection(List<InetSocketAddress> addrs) throws IOException {
         MemcachedConnection rv = super.createConnection(addrs);
@@ -59,7 +83,7 @@ public class QueueOverflowTest extends ClientBaseCase {
 
       @Override
       public long getOperationTimeout() {
-        return 5000;
+        return 10000;
       }
 
       @Override
@@ -114,6 +138,12 @@ public class QueueOverflowTest extends ClientBaseCase {
         client.set("kx", 0, "woo").get(10, TimeUnit.SECONDS));
   }
 
+  @Test
+  public void testOverflowingInputQueue() throws Exception {
+    runOverflowTest(new byte[] { 1 });
+  }
+
+  @Test
   public void testOverflowingWriteQueue() throws Exception {
     byte[] b = new byte[8192];
     Random r = new Random();
@@ -126,6 +156,7 @@ public class QueueOverflowTest extends ClientBaseCase {
     runOverflowTest(b);
   }
 
+  @Test
   public void testOverflowingReadQueue() throws Exception {
     byte[] b = new byte[8192];
     Random r = new Random();

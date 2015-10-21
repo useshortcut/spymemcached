@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -28,20 +39,30 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
+import net.spy.memcached.categories.StandardTests;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test the various memcached client constructors.
  */
-public class MemcachedClientConstructorTest extends TestCase {
+@Category(StandardTests.class)
+public class MemcachedClientConstructorTest {
 
   private MemcachedClient client = null;
 
-  @Override
-  protected void tearDown() throws Exception {
+  @Before
+  public void tearDown() throws Exception {
     if (client != null) {
       try {
         client.shutdown();
@@ -55,13 +76,15 @@ public class MemcachedClientConstructorTest extends TestCase {
         // initialized is attempting to be shut down.
       }
     }
-    super.tearDown();
   }
 
   private void assertWorking() throws Exception {
     Map<SocketAddress, String> versions = client.getVersions();
-    assertEquals("/" + TestConfig.IPV4_ADDR + ":" + TestConfig.PORT_NUMBER,
-        versions.keySet().iterator().next().toString());
+    Iterator<SocketAddress> iterator = versions.keySet().iterator(); 
+    while(iterator.hasNext()){
+      String hostString = iterator.next().toString();
+      assertTrue(hostString.contains("/" + TestConfig.IPV4_ADDR + ":" + TestConfig.PORT_NUMBER));
+    }
   }
 
   private void assertArgRequired(IllegalArgumentException e) {
@@ -69,14 +92,17 @@ public class MemcachedClientConstructorTest extends TestCase {
         e.getMessage());
   }
 
+  @Test
   public void testVarargConstructor() throws Exception {
-    client =
-        new MemcachedClient(new InetSocketAddress(
-            InetAddress.getByName(TestConfig.IPV4_ADDR),
-                TestConfig.PORT_NUMBER));
+    InetSocketAddress host1 = new InetSocketAddress(
+        InetAddress.getByName(TestConfig.IPV4_ADDR),
+        TestConfig.PORT_NUMBER);
+    InetSocketAddress host2 = host1;
+    client = new MemcachedClient(host1, host2);
     assertWorking();
   }
 
+  @Test
   public void testEmptyVarargConstructor() throws Exception {
     try {
       client = new MemcachedClient();
@@ -86,6 +112,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testNulListConstructor() throws Exception {
     try {
       List<InetSocketAddress> l = null;
@@ -96,6 +123,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testEmptyListConstructor() throws Exception {
     try {
       client = new MemcachedClient(Collections.<InetSocketAddress>emptyList());
@@ -105,6 +133,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testNullFactoryConstructor() throws Exception {
     try {
       client =
@@ -116,6 +145,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testNegativeTimeout() throws Exception {
     try {
       client = new MemcachedClient(new DefaultConnectionFactory() {
@@ -131,6 +161,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testZeroTimeout() throws Exception {
     try {
       client = new MemcachedClient(new DefaultConnectionFactory() {
@@ -146,6 +177,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testConnFactoryWithoutOpFactory() throws Exception {
     try {
       client = new MemcachedClient(new DefaultConnectionFactory() {
@@ -161,6 +193,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testConnFactoryWithoutConns() throws Exception {
     try {
       client = new MemcachedClient(new DefaultConnectionFactory() {
@@ -177,6 +210,7 @@ public class MemcachedClientConstructorTest extends TestCase {
     }
   }
 
+  @Test
   public void testArraymodNodeLocatorAccessor() throws Exception {
     client =
         new MemcachedClient(AddrUtil.getAddresses(TestConfig.IPV4_ADDR
@@ -186,6 +220,7 @@ public class MemcachedClientConstructorTest extends TestCase {
         instanceof MemcachedNodeROImpl);
   }
 
+  @Test
   public void testKetamaNodeLocatorAccessor() throws Exception {
     client =
         new MemcachedClient(new KetamaConnectionFactory(),

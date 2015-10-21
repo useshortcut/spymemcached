@@ -19,29 +19,47 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.internal.GetFuture;
 import net.spy.memcached.internal.OperationFuture;
-
 import net.spy.memcached.ops.OperationCallback;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.StatusCode;
 import net.spy.memcached.protocol.ascii.ExtensibleOperationImpl;
+
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This test assumes a server is running on the host specified in the
  * environment variable SPY_MC_TEST_SERVER or localhost:11211 by default.
  */
+@Category(StandardTests.class)
 public class AsciiClientTest extends ProtocolBaseCase {
 
+  @Test
   public void testBadOperation() throws Exception {
     client.mconn.enqueueOperation("x",
         new ExtensibleOperationImpl(new OperationCallback() {
@@ -67,22 +85,23 @@ public class AsciiClientTest extends ProtocolBaseCase {
   }
 
   @Override
-  @Test(expected=UnsupportedOperationException.class)
   public void testSetReturnsCAS() {
   }
+
   @Override
   protected String getExpectedVersionSource() {
     return String.valueOf(new InetSocketAddress(TestConfig.IPV4_ADDR,
         TestConfig.PORT_NUMBER));
   }
 
+  @Test
   public void testAsyncCASResponse() throws InterruptedException,
-    ExecutionException {
+  ExecutionException {
     String key = "testAsyncCASResponse";
     client.set(key, 300, key + "0");
     CASValue<Object> getsRes = client.gets(key);
     OperationFuture<CASResponse> casRes = client.asyncCAS(key, getsRes.getCas(),
-      key + "1");
+        key + "1");
     try {
       casRes.getCas();
       fail("Expected an UnsupportedOperationException");
@@ -91,6 +110,7 @@ public class AsciiClientTest extends ProtocolBaseCase {
     }
   }
 
+  @Test
   public void testAddGetSetStatusCodes() throws Exception {
     OperationFuture<Boolean> set = client.set("statusCode1", 0, "value");
     set.get();
@@ -105,6 +125,7 @@ public class AsciiClientTest extends ProtocolBaseCase {
     assertEquals(StatusCode.ERR_NOT_STORED, add.getStatus().getStatusCode());
   }
 
+  @Test
   public void testAsyncIncrementWithDefault() throws Exception {
     String k = "async-incr-with-default";
     try {
@@ -115,6 +136,7 @@ public class AsciiClientTest extends ProtocolBaseCase {
     }
   }
 
+  @Test
   public void testAsyncDecrementWithDefault() throws Exception {
     String k = "async-decr-with-default";
     try {

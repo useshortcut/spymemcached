@@ -9,30 +9,8 @@
  * implied. See the License for the specific language governing permissions and 
  * limitations under the License. 
  */
-package net.spy.memcached.ops;
+package net.spy.memcached.categories;
 
-/**
- * Operation that represents config set.
- */
-public interface SetConfigOperation extends Operation {
+public class StandardTests {
 
-  /**
-   * Get the type used for setting the config.
-   */
-  ConfigurationType getType();
-  
-  /**
-   * Get the flags to be set.
-   */
-  int getFlags();
-
-  /**
-   * Get the bytes to be set during this operation.
-   *
-   * <p>
-   * Note, this returns an exact reference to the bytes and the data
-   * <em>must not</em> be modified.
-   * </p>
-   */
-  byte[] getData();
 }

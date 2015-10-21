@@ -18,6 +18,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -28,13 +39,22 @@ import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.compat.SpyObject;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Test observer hooks.
  */
+@Category(StandardTests.class)
 public class ObserverTest extends ClientBaseCase {
 
+  @Test
   public void testConnectionObserver() throws Exception {
     ConnectionObserver obs = new LoggingObserver();
     assertTrue("Didn't add observer.", client.addObserver(obs));
@@ -42,6 +62,7 @@ public class ObserverTest extends ClientBaseCase {
     assertFalse("Removed observer more than once.", client.removeObserver(obs));
   }
 
+  @Test
   public void testInitialObservers() throws Exception {
     assertTrue("Couldn't shut down within five seconds",
         client.shutdown(5, TimeUnit.SECONDS));
@@ -61,6 +82,10 @@ public class ObserverTest extends ClientBaseCase {
 
     // Get a new client
     initClient(new DefaultConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
 
       @Override
       public Collection<ConnectionObserver> getInitialObservers() {

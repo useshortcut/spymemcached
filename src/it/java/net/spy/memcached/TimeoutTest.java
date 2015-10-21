@@ -19,24 +19,52 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
 
+import static org.junit.Assert.fail;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+
+import net.spy.memcached.categories.StandardTests;
+import net.spy.memcached.ops.ConfigurationType;
+
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 /**
  * A TimeoutTest.
  */
+@Category(StandardTests.class)
 public class TimeoutTest extends ClientBaseCase {
 
   @Override
-  protected void tearDown() throws Exception {
+public void tearDown() throws Exception {
     // override teardown to avoid the flush phase
     client.shutdown();
   }
 
   @Override
   protected void initClient() throws Exception {
-    client = new MemcachedClient(new DefaultConnectionFactory() {
+    ConnectionFactory cf = new DefaultConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
       @Override
       public long getOperationTimeout() {
         return 20;
@@ -46,7 +74,27 @@ public class TimeoutTest extends ClientBaseCase {
       public FailureMode getFailureMode() {
         return FailureMode.Retry;
       }
-    }, AddrUtil.getAddresses(TestConfig.IPV4_ADDR + ":64213"));
+    };
+    if(TestConfig.getInstance().getClientMode() == ClientMode.Dynamic){
+      List<InetSocketAddress> addrs = AddrUtil.getAddresses(TestConfig.IPV4_ADDR+ ":11212");
+      MemcachedClient staticClient = new MemcachedClient(addrs);
+      
+      if(TestConfig.getInstance().getEngineType().isSetConfigSupported()) {
+          staticClient.setConfig(addrs.get(0), ConfigurationType.CLUSTER, "1\n" + "localhost.localdomain|" + TestConfig.IPV4_ADDR + "|" + "11212");
+          client = new MemcachedClient(cf, AddrUtil.getAddresses(TestConfig.IPV4_ADDR    + ":11212"));
+          staticClient.setConfig(addrs.get(0), ConfigurationType.CLUSTER, "2\nlocalhost.localdomain|" + TestConfig.IPV4_ADDR + "|64213");
+      } else {
+    	  staticClient.set(ConfigurationType.CLUSTER.getValueWithNameSpace(), 0, "1\n" + "localhost.localdomain|" + TestConfig.IPV4_ADDR + "|" + "11212");
+          client = new MemcachedClient(cf, AddrUtil.getAddresses(TestConfig.IPV4_ADDR    + ":11212"));
+          staticClient.set(ConfigurationType.CLUSTER.getValueWithNameSpace(), 0, "2\nlocalhost.localdomain|" + TestConfig.IPV4_ADDR + "|64213");
+      }
+      //Add delay for the client to pick up new config.
+      Thread.sleep(10000);
+      
+    } else {
+      client = new MemcachedClient(cf, AddrUtil.getAddresses(TestConfig.IPV4_ADDR
+          + ":64213"));
+    }
   }
 
   private void tryTimeout(String name, Runnable r) {
@@ -57,7 +105,8 @@ public class TimeoutTest extends ClientBaseCase {
       // pass
     }
   }
-
+  
+  @Test
   public void testCasTimeout() {
     tryTimeout("cas", new Runnable() {
       public void run() {
@@ -66,6 +115,7 @@ public class TimeoutTest extends ClientBaseCase {
     });
   }
 
+  @Test
   public void testGetsTimeout() {
     tryTimeout("gets", new Runnable() {
       public void run() {
@@ -74,6 +124,7 @@ public class TimeoutTest extends ClientBaseCase {
     });
   }
 
+  @Test
   public void testGetTimeout() {
     tryTimeout("get", new Runnable() {
       public void run() {
@@ -82,6 +133,7 @@ public class TimeoutTest extends ClientBaseCase {
     });
   }
 
+  @Test
   public void testGetBulkTimeout() {
     tryTimeout("getbulk", new Runnable() {
       public void run() {
@@ -90,6 +142,7 @@ public class TimeoutTest extends ClientBaseCase {
     });
   }
 
+  @Test
   public void testIncrTimeout() {
     tryTimeout("incr", new Runnable() {
       public void run() {
@@ -98,6 +151,7 @@ public class TimeoutTest extends ClientBaseCase {
     });
   }
 
+  @Test
   public void testIncrWithDefTimeout() {
     tryTimeout("incrWithDef", new Runnable() {
       public void run() {

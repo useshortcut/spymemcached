@@ -18,6 +18,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -25,7 +36,7 @@ package net.spy.memcached;
 /**
  * A testConfig.
  */
-public final class TestConfig {
+public final class UnitTestConfig {
   public static final String IPV4_PROP = "server.address_v4";
   public static final String IPV6_PROP = "server.address_v6";
   public static final String TEST_PROP = "test.type";
@@ -33,21 +44,25 @@ public final class TestConfig {
   public static final String TYPE_TEST_UNIT = "unit";
   public static final String TYPE_TEST_CI = "ci";
 
+  //currently server host address ipv4 is always default to "127.0.0.1", disabled in build.xml
   public static final String IPV4_ADDR = System.getProperty(IPV4_PROP,
       "127.0.0.1");
   public static final String IPV6_ADDR = resolveIpv6Addr();
 
+  //currently server port is always default to 11211, disabled in build.xml
   public static final int PORT_NUMBER =
       Integer.parseInt(System.getProperty(PORT_PROP, "11211"));
 
+  //currently test type is always default to unit, disabled in build.xml
   public static final String TEST_TYPE = System.getProperty(TEST_PROP,
       TYPE_TEST_UNIT).toLowerCase();
 
-  private TestConfig() {
+  private UnitTestConfig() {
     // Empty
   }
 
   private static String resolveIpv6Addr() {
+	//currently server host address ipv6 is always default to "::1", disabled in build.xml
     String ipv6 = System.getProperty(IPV6_PROP, "::1");
     // If the ipv4 address was set but the ipv6 address wasn't then
     // set the ipv6 address to use ipv4.

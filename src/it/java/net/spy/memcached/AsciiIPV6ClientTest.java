@@ -19,30 +19,46 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
 
 import java.net.InetSocketAddress;
 
+import net.spy.memcached.categories.StandardTests;
+
+import org.junit.experimental.categories.Category;
+
 /**
- * Binary IPv6 client test.
+ * Test the test protocol over IPv6.
  */
-public class BinaryIPV6ClientTest extends BinaryClientTest {
+@Category(StandardTests.class)
+public class AsciiIPV6ClientTest extends AsciiClientTest {
 
   @Override
   protected void initClient(ConnectionFactory cf) throws Exception {
-    client = new MemcachedClient(cf, AddrUtil.getAddresses(TestConfig.IPV6_ADDR
-        + ":" + TestConfig.PORT_NUMBER));
+    client = new MemcachedClient(cf,
+            AddrUtil.getAddresses(TestConfig.IPV6_ADDR
+            + ":" + TestConfig.PORT_NUMBER));
   }
 
   @Override
   protected String getExpectedVersionSource() {
     if (TestConfig.defaultToIPV4()) {
       return String.valueOf(new InetSocketAddress(TestConfig.IPV4_ADDR,
-        TestConfig.PORT_NUMBER));
+              TestConfig.PORT_NUMBER));
     }
     return String.valueOf(new InetSocketAddress(TestConfig.IPV6_ADDR,
-        TestConfig.PORT_NUMBER));
+            TestConfig.PORT_NUMBER));
   }
 }

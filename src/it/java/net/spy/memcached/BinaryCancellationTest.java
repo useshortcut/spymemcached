@@ -1,6 +1,5 @@
 /**
  * Copyright (C) 2006-2009 Dustin Sallings
- * Copyright (C) 2009-2011 Couchbase, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,33 +33,38 @@
 
 package net.spy.memcached;
 
-import junit.framework.TestCase;
+import net.spy.memcached.categories.StandardTests;
+
+import org.junit.experimental.categories.Category;
 
 /**
- * Test connection factory variations.
+ * Test cancellation in the binary protocol.
  */
-public class ConnectionFactoryTest extends TestCase {
+@Category(StandardTests.class)
+public class BinaryCancellationTest extends CancellationBaseCase {
 
-  // These tests are a little lame. They don't verify anything other than
-  // that the code executes without failure.
-  public void testBinaryEmptyCons() {
-    new BinaryConnectionFactory();
-  }
+  @Override
+  protected void initClient() throws Exception {
+    initClient(new BinaryConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
+      @Override
+      public long getOperationTimeout() {
+        return 15000;
+      }
 
-  public void testBinaryTwoIntCons() {
-    new BinaryConnectionFactory(5, 5);
-  }
-
-  public void testBinaryAnIntAnotherIntAndAHashAlgorithmCons() {
-    new BinaryConnectionFactory(ClientMode.Static, 5, 5, DefaultHashAlgorithm.FNV1_64_HASH);
-  }
-
-  public void testQueueSizes() {
-    ConnectionFactory cf = new DefaultConnectionFactory(100, 1024);
-    assertEquals(100, cf.createOperationQueue().remainingCapacity());
-    assertEquals(Integer.MAX_VALUE, cf.createWriteOperationQueue()
-        .remainingCapacity());
-    assertEquals(Integer.MAX_VALUE, cf.createReadOperationQueue()
-        .remainingCapacity());
+      @Override
+      public FailureMode getFailureMode() {
+        return FailureMode.Retry;
+      }
+      
+      @Override
+      public long getDynamicModePollingInterval(){
+        return 3000l;
+      }
+    });
   }
 }

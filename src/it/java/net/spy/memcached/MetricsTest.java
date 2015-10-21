@@ -23,11 +23,13 @@
 
 package net.spy.memcached;
 
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.metrics.DefaultMetricCollector;
 import net.spy.memcached.metrics.DummyMetricCollector;
 import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.metrics.NoopMetricCollector;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.HashMap;
 
@@ -38,6 +40,7 @@ import static org.junit.Assert.assertNotNull;
 /**
  * Tests the initialization and measurement of Metrics.
  */
+@Category(StandardTests.class)
 public class MetricsTest {
 
   @Test

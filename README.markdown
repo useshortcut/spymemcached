@@ -12,30 +12,39 @@ command:
 This will generate binary, source, and javadoc jars in the build
 directory of the project.
 
-More test info will be updated shortly.
-
 # Testing
 
-_Note: The ant test target is in the process of being updated to run the additional tests written for Auto Discovery._
+The latest version of Amazon ElastiCache Cluster Client supports unit tests and integration tests.
 
-The latest version of Amazon ElastiCache Cluster Client has a set of command line arguments
-that can be used to configure the location of your testing server. The
-arguments are listed below.
+Unit tests do not require any running memcached servers, and can be run using Apache Ant by the following command:
 
-    -Dserver.address_v4=ipv4_address_of_testing_server
+    ant test
 
-This argument is used to specify the ipv4 address of your testing
-server. By default it is set to localhost.
+Integration tests are always run against local memcached servers. Start integration tests by the
+following command:
 
-    -Dserver.port_number=port_number_of_memcached
+    ant it
 
-This argument is used when memcahched is started on a port other than
-11211
+It has a set of command line arguments that can be used to configure your client mode and your local testing server. The arguments are listed below.
+
+    -Dclient.mode=memcached_client_mode
+
+This argument is used to specify the mode of the client that you want to run. Supported options are _Static_ and _Dynamic_.
+_Dynamic_ mode enables Auto Discovery feature. _Static_ mode runs without Auto Discovery and has the same functionality as a classic spymemcached client. By default it is set to _Dynamic_.
+
+    -Dserver.bin=local_binary_of_testing_server
+
+This argument is used to specify the location of your testing
+server binary. By default it is set to _/usr/bin/memcached_.
+
+    -Dserver.version=version_of_testing_server
+
+This argument is used to specify the version of your testing server. Currently supported memcached versions by Elasticache are _1.4.5_, _1.4.14_, _1.4.24_.
+By default it is set to _1.4.24_.
 
     -Dtest.type=ci
 
-This argument is used for CI testing where certain unit tests might
-be temporarily failing.
+This argument is used for CI testing where certain tests might be temporarily failing.
 
 # More Information for Amazon ElastiCache Cluster Client
 Github link: https://github.com/amazonwebservices/aws-elasticache-cluster-client-memcached-for-java

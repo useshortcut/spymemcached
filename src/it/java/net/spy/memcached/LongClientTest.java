@@ -19,6 +19,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -34,17 +45,30 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.compat.SyncThread;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Longer running test case.
  */
+@Category(StandardTests.class)
 public class LongClientTest extends ClientBaseCase {
 
+  @Test
   public void testParallelGet() throws Throwable {
     // Get a connection with the get optimization disabled.
     client.shutdown();
     initClient(new DefaultConnectionFactory() {
+      @Override
+      public ClientMode getClientMode() {
+        return TestConfig.getInstance().getClientMode();
+      }
+      
       @Override
       public MemcachedConnection
       createConnection(List<InetSocketAddress> addrs) throws IOException {

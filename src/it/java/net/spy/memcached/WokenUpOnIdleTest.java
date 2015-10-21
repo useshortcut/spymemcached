@@ -22,8 +22,10 @@
  */
 package net.spy.memcached;
 
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.protocol.binary.BinaryOperationFactory;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -40,6 +42,7 @@ import static org.junit.Assert.assertTrue;
  * Verifies the functionality of the {@link MemcachedConnection} that the
  * selector gets woken up automatically if idle.
  */
+@Category(StandardTests.class)
 public class WokenUpOnIdleTest {
 
   @Test

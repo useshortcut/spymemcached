@@ -18,22 +18,28 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
 
-/**
- * Test cancellation in the binary protocol.
- */
-public class BinaryCancellationTest extends CancellationBaseCase {
+import org.junit.experimental.categories.Category;
 
-  @Override
-  protected void initClient() throws Exception {
-    initClient(new BinaryConnectionFactory() {
-      @Override
-      public FailureMode getFailureMode() {
-        return FailureMode.Retry;
-      }
-    });
-  }
+import net.spy.memcached.categories.StandardTests;
+
+/**
+ * Test cancellation in ascii protocol.
+ */
+@Category(StandardTests.class)
+public class AsciiCancellationTest extends CancellationBaseCase {
+  // uses defaults
 }

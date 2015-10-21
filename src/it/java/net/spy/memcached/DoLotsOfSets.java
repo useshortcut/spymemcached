@@ -19,6 +19,16 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
@@ -27,9 +37,14 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import net.spy.memcached.categories.StandardTests;
+
+import org.junit.experimental.categories.Category;
+
 /**
  * Small test program that does a bunch of sets in a tight loop.
  */
+@Category(StandardTests.class)
 public final class DoLotsOfSets {
 
   private DoLotsOfSets() {
@@ -39,10 +54,11 @@ public final class DoLotsOfSets {
   public static void main(String[] args) throws Exception {
     // Create a client with a queue big enough to hold the 300,000 items
     // we're going to add.
-    MemcachedClient client =
-        new MemcachedClient(new DefaultConnectionFactory(350000, 32768),
-        AddrUtil.getAddresses(TestConfig.IPV4_ADDR
-            + ":" + TestConfig.PORT_NUMBER));
+    MemcachedClient client = new MemcachedClient(new DefaultConnectionFactory(350000, 32768),
+		  AddrUtil.getAddresses(TestConfig.IPV4_ADDR
+				  + ":" + TestConfig.PORT_NUMBER));
+
+    
     long start = System.currentTimeMillis();
     byte[] toStore = new byte[26];
     Arrays.fill(toStore, (byte) 'a');

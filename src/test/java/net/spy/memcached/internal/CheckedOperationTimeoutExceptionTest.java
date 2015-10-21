@@ -31,7 +31,7 @@ import java.util.Collection;
 
 import junit.framework.TestCase;
 import net.spy.memcached.MockMemcachedNode;
-import net.spy.memcached.TestConfig;
+import net.spy.memcached.UnitTestConfig;
 import net.spy.memcached.ops.Operation;
 import net.spy.memcached.protocol.BaseOperationImpl;
 
@@ -41,10 +41,10 @@ import net.spy.memcached.protocol.BaseOperationImpl;
 public class CheckedOperationTimeoutExceptionTest extends TestCase {
 
   public void testSingleOperation() {
-    Operation op = buildOp(TestConfig.PORT_NUMBER);
+    Operation op = buildOp(UnitTestConfig.PORT_NUMBER);
     assertEquals(CheckedOperationTimeoutException.class.getName()
-        + ": test - failing node: " + TestConfig.IPV4_ADDR + ":"
-            + TestConfig.PORT_NUMBER,
+        + ": test - failing node: " + UnitTestConfig.IPV4_ADDR + ":"
+            + UnitTestConfig.PORT_NUMBER,
         new CheckedOperationTimeoutException("test", op).toString());
   }
 
@@ -64,11 +64,11 @@ public class CheckedOperationTimeoutExceptionTest extends TestCase {
 
   public void testMultipleOperation() {
     Collection<Operation> ops = new ArrayList<Operation>();
-    ops.add(buildOp(TestConfig.PORT_NUMBER));
+    ops.add(buildOp(UnitTestConfig.PORT_NUMBER));
     ops.add(buildOp(64212));
     assertEquals(CheckedOperationTimeoutException.class.getName()
-        + ": test - failing nodes: " + TestConfig.IPV4_ADDR + ":"
-            + TestConfig.PORT_NUMBER + ", " + TestConfig.IPV4_ADDR
+        + ": test - failing nodes: " + UnitTestConfig.IPV4_ADDR + ":"
+            + UnitTestConfig.PORT_NUMBER + ", " + UnitTestConfig.IPV4_ADDR
             + ":64212",
         new CheckedOperationTimeoutException("test", ops).toString());
   }
@@ -77,7 +77,7 @@ public class CheckedOperationTimeoutExceptionTest extends TestCase {
     TestOperation op = new TestOperation();
     MockMemcachedNode node =
         new MockMemcachedNode(InetSocketAddress.createUnresolved(
-          TestConfig.IPV4_ADDR, portNum));
+          UnitTestConfig.IPV4_ADDR, portNum));
     op.setHandlingNode(node);
     return op;
   }

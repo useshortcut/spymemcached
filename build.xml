@@ -19,7 +19,7 @@
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-  Portions Copyright (C) 2012-2012 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
    
   Licensed under the Amazon Software License (the "License"). You may not use this 
   file except in compliance with the License. A copy of the License is located at
@@ -42,7 +42,7 @@
   </taskdef>
 
   <property name="name" value="AmazonElastiCacheClusterClient"/>
-  <property name="copyright" value="2006-2011 Dustin Sallings, Matt Ingenthron, 2012-2012 Amazon.com, Inc. or its affiliates" />
+  <property name="copyright" value="2006-2011 Dustin Sallings, Matt Ingenthron, 2012-2015 Amazon.com, Inc. or its affiliates" />
   <property name="group" value="spy" />
 
   <property name="base.src.dir" value="${basedir}/src" />
@@ -52,9 +52,11 @@
   <property name="lib.dir" value="${basedir}/lib" />
   <property name="src.dir" value="${base.src.dir}/main/java" />
   <property name="test.dir" value="${base.src.dir}/test/java" />
+  <property name="it.dir" value="${base.src.dir}/it/java" />
   <property name="script.src.dir" value="${base.src.dir}/scripts" />
   <property name="build.javadoc" location="${build.dir}/docs/" />
   <property name="build.javadoc.test" location="${build.dir}/testdocs/" />
+  <property name="build.javadoc.it" location="${build.dir}/itdocs/" />
   <property name="junit.dir" location="${build.dir}/junit" />
 
   <property name="dist.dir" value="${basedir}/target" />
@@ -82,6 +84,11 @@
   <property name="build.test" location="${build.dir}/test"/>
   <property name="test.log.dir" location="${build.dir}/test/logs"/>
   <property name="build.test.classes" location="${build.test}/classes" />
+
+  <!-- integration tests -->
+  <property name="build.it" location="${build.dir}/it"/>
+  <property name="it.log.dir" location="${build.dir}/it/logs"/>
+  <property name="build.it.classes" location="${build.it}/classes" />
 
   <!-- maven -->
   <property name="mvn.build.dir" value="${build.dir}" />
@@ -122,6 +129,15 @@
   <property name="server.address_v4" value="127.0.0.1"/>
   <property name="server.address_v6" value="::1"/>
   <property name="server.port_number" value="11211"/>
+  <property name="test.type" value="unit"/>
+
+  <!--integration test related properties -->
+  <property name="client.mode" value="Dynamic"/>
+  <property name="server.address_v4" value="127.0.0.1"/>
+  <property name="server.address_v6" value="::1"/>
+  <property name="server.bin" value="/usr/bin/memcached"/>
+  <property name="server.port_number" value="11211"/>
+  <property name="server.version" value="1.4.24"/>
   <property name="test.type" value="unit"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
@@ -167,6 +183,12 @@
     <!-- Classpath for unit tests (superset of compile.classpath) -->
     <path id="test.classpath">
       <pathelement location="${build.test.classes}" />
+      <path refid="compile.classpath" />
+    </path>
+
+    <!-- Classpath for integration tests (superset of compile.classpath) -->
+    <path id="it.classpath">
+      <pathelement location="${build.it.classes}" />
       <path refid="compile.classpath" />
     </path>
   </target>
@@ -251,10 +273,6 @@
 
   <target name="test" depends="compile, compile-test"
       description="Run Spymemcached unit tests">
-    <echo>IPV4 address ${server.address_v4}</echo>
-    <echo>IPV6 address ${server.address_v6}</echo>
-    <echo>Port Number ${server.port_number}</echo>
-    <echo>Test Type(unit|ci) ${test.type}</echo>
     <delete dir="${junit.dir}"/>
     <mkdir  dir="${junit.dir}/data"/>
     <junit fork="yes" timeout="60000" failureproperty="junit.failure">
@@ -265,10 +283,6 @@
       <formatter type="xml"/>
       </batchtest>
       <jvmarg value="-ea" />
-      <sysproperty key="server.address_v4" value="${server.address_v4}"/>
-      <sysproperty key="server.address_v6" value="${server.address_v6}"/>
-      <sysproperty key="server.port_number" value="${server.port_number}"/>
-      <sysproperty key="test.type" value="${test.type}"/>
       <formatter type="plain" usefile="false" />
       <classpath refid="test.classpath" />
     </junit>
@@ -279,6 +293,38 @@
     </junitreport>
     <delete  dir="${junit.dir}/tmp"/>
     <fail if="junit.failure" message="Unit test(s) failed.  See reports!"/>
+  </target>
+
+  <target name="it" depends="compile, compile-it"
+      description="Run Spymemcached integration tests">
+    <echo>Client mode(Dynamic|Static) ${client.mode}</echo>
+    <echo>Server binary ${server.bin}</echo>
+    <echo>Server version ${server.version}</echo>
+    <echo>Test Type(unit|ci) ${test.type}</echo>
+    <delete dir="${junit.dir}"/>
+    <mkdir  dir="${junit.dir}/data"/>
+    <junit fork="yes" timeout="3600000" failureproperty="junit.failure">
+      <batchtest todir="${junit.dir}/data" fork="yes">
+        <fileset dir="${it.dir}">
+          <include name="**/${client.mode}ModeTestSuite.java"/>
+        </fileset>
+      <formatter type="xml"/>
+      </batchtest>
+      <jvmarg value="-ea" />
+      <sysproperty key="client.mode" value="${client.mode}"/>
+      <sysproperty key="server.bin" value="${server.bin}"/>
+      <sysproperty key="server.version" value="${server.version}"/>
+      <sysproperty key="test.type" value="${test.type}"/>
+      <formatter type="plain" usefile="false" />
+      <classpath refid="it.classpath" />
+    </junit>
+    <mkdir  dir="${junit.dir}/tmp"/>
+    <junitreport todir="${junit.dir}/tmp">
+      <fileset dir="${junit.dir}/data"/>
+      <report todir="${junit.dir}"/>
+    </junitreport>
+    <delete  dir="${junit.dir}/tmp"/>
+    <fail if="junit.failure" message="Integration test(s) failed.  See reports!"/>
   </target>
 
     <target name="junitreport">
@@ -309,6 +355,24 @@
     </javac>
   </target>
 
+  <target name="compile-it" depends="compile"
+      description="Compile integration test classes">
+    <mkdir dir="${build.it.classes}" />
+    <javac
+        encoding="${build.encoding}"
+        srcdir="${it.dir}"
+        includes="**/*.java"
+        destdir="${build.it.classes}"
+        debug="${javac.debug}"
+        includeantruntime="false"
+        target="1.6"
+        source="1.6">
+      <classpath>
+        <path refid="it.classpath"/>
+      </classpath>
+    </javac>
+  </target>
+
   <!-- =======================================
         Section: Documentation Generation
        ======================================= -->
@@ -323,6 +387,10 @@
         <include name="**/*.java" />
         <include name="**/*.html" />
       </srcfiles>
+      <srcfiles dir="${it.dir}">
+        <include name="**/*.java" />
+        <include name="**/*.html" />
+      </srcfiles>
       <mapper type="merge" to="${build.javadoc}/index.html" />
     </uptodate>
   </target>
@@ -331,6 +399,7 @@
       depends="init,javadoc-uptodate,compile" >
     <mkdir dir="${build.javadoc}" />
     <mkdir dir="${build.javadoc.test}" />
+    <mkdir dir="${build.javadoc.it}" />
     <exec executable="date" outputproperty="year">
       <arg value="+%Y" />
     </exec>
@@ -366,6 +435,21 @@
       </packageset>
       <classpath refid="test.classpath" />
     </javadoc>
+    <javadoc
+      packagenames="src"
+      sourcepath="${it.dir}"
+      destdir="${build.javadoc.it}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${name}-it ${version} API"
+      doctitle="${name}-it ${version} API"
+      bottom="Copyright &amp;copy; 2006-2009 Dustin Sallings, 2009-2013 Couchbase, Inc.">
+      <packageset dir="${it.dir}">
+        <include name="**" />
+      </packageset>
+      <classpath refid="it.classpath" />
+    </javadoc>
   </target>
 
   <target name="docsjar" depends="docs"
@@ -375,6 +459,8 @@
         basedir="${build.javadoc}" />
     <zip destfile="${build.dir}/javadocs/${name}-test-${version}.jar"
         basedir="${build.javadoc.test}" />
+    <zip destfile="${build.dir}/javadocs/${name}-it-${version}.jar"
+        basedir="${build.javadoc.it}" />
   </target>
 
   <!-- =======================================
@@ -442,9 +528,12 @@
     <jar jarfile="${build.dir}/sources/${name}-test-${version}.jar">
       <fileset dir="${test.dir}" />
     </jar>
+    <jar jarfile="${build.dir}/sources/${name}-it-${version}.jar">
+      <fileset dir="${it.dir}" />
+    </jar>
   </target>
 
-  <target name="jar" depends="compile,compile-test" description="Creates a jar file for the library">
+  <target name="jar" depends="compile,compile-test,compile-it" description="Creates a jar file for the library">
     <mkdir dir="${build.dir}/jars" />
     <jar jarfile="${build.dir}/jars/${name}-${version}.jar" basedir="${build.classes}">
       <manifest>
@@ -456,6 +545,7 @@
       </manifest>
     </jar>
     <jar jarfile="${build.dir}/jars/${name}-test-${version}.jar" basedir="${build.test.classes}"/>
+    <jar jarfile="${build.dir}/jars/${name}-it-${version}.jar" basedir="${build.it.classes}"/>
   </target>
 
   <target name="package" depends="jar,srcjar,docsjar"
@@ -497,6 +587,7 @@
     <!-- prepare for mvn tasks. -->
     <property name="spymemcached.pom" value="${mvn.build.dir}/poms/spymemcached-${version}.pom" />
     <property name="spymemcached-test.pom" value="${mvn.build.dir}/poms/spymemcached-test-${version}.pom" />
+    <property name="spymemcached-it.pom" value="${mvn.build.dir}/poms/spymemcached-it-${version}.pom" />
 
     <!-- Register mvn tasks -->
     <path id="mvn-ant-task.classpath" path="${mvn.jar}" />
@@ -520,6 +611,18 @@
 
     <ivy:makepom ivyfile="ivy/spymemcached-test.xml"
         pomfile="${spymemcached-test.pom}"
+        templatefile="ivy/pom.template.xml"
+        settingsRef="${name}.ivy.settings">
+      <mapping conf="default" scope="compile" />
+      <mapping conf="runtime" scope="runtime" />
+      <dependency group="log4j" artifact="log4j" version="${log4j.version}" optional="true" />
+      <dependency group="org.slf4j" artifact="slf4j-api" version="${slf4j.version}" optional="true" />
+      <dependency group="org.springframework" artifact="spring-beans" version="${spring-beans.version}" optional="true" />
+      <dependency group="com.codahale.metrics" artifact="metrics-core" version="${codahale.metrics.version}" />
+   </ivy:makepom>
+
+    <ivy:makepom ivyfile="ivy/spymemcached-it.xml"
+        pomfile="${spymemcached-it.pom}"
         templatefile="ivy/pom.template.xml"
         settingsRef="${name}.ivy.settings">
       <mapping conf="default" scope="compile" />
@@ -557,6 +660,14 @@
         <attach file="${build.dir}/sources/${name}-test-${version}.jar"
           classifier="sources" />
         <attach file="${build.dir}/javadocs/${name}-test-${version}.jar"
+          classifier="javadoc" />
+    </artifact:install>
+    <artifact:pom id="spymemcached-it" file="${spymemcached-it.pom}" />
+      <artifact:install file="${build.dir}/jars/${name}-it-${version}.jar">
+        <pom refid="${name}-it" />
+        <attach file="${build.dir}/sources/${name}-it-${version}.jar"
+          classifier="sources" />
+        <attach file="${build.dir}/javadocs/${name}-it-${version}.jar"
           classifier="javadoc" />
     </artifact:install>
   </target>
@@ -635,6 +746,38 @@
             <arg value="-Dclassifier=javadoc" />
             <arg value="-Pgpg" />
     </artifact:mvn>
+
+        <!-- sign and deploy the main artifact -->
+    <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${spymemcached-it.pom}" />
+            <arg value="-Dfile=${build.dir}/jars/${name}-it-${version}.jar" />
+            <arg value="-Pgpg" />
+    </artifact:mvn>
+
+    <!-- sign and deploy the sources artifact -->
+    <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${spymemcached-it.pom}" />
+            <arg value="-Dfile=${build.dir}/sources/${name}-it-${version}.jar" />
+            <arg value="-Dclassifier=sources" />
+            <arg value="-Pgpg" />
+    </artifact:mvn>
+
+    <!-- sign and deploy the javadoc artifact -->
+    <artifact:mvn>
+            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
+            <arg value="-Durl=${maven-staging-repository-url}" />
+            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
+            <arg value="-DpomFile=${spymemcached-it.pom}" />
+            <arg value="-Dfile=${build.dir}/javadocs/${name}-it-${version}.jar" />
+            <arg value="-Dclassifier=javadoc" />
+            <arg value="-Pgpg" />
+    </artifact:mvn>
   </target>
 
   <!-- ======================================
@@ -662,6 +805,7 @@
       </auxClasspath>
       <sourcePath path="${src.dir}" />
       <sourcePath path="${test.dir}" />
+      <sourcePath path="${it.dir}" />
       <class location="${build.dir}/${dest.jar}" />
     </findbugs>
     <xslt style="${findbugs.home}/src/xsl/default.xsl"
@@ -689,6 +833,7 @@
       <classpath>
         <source path="${src.dir}" />
         <source path="${test.dir}" />
+        <source path="${it.dir}" />
         <output path="${build.dir}/eclipse-build" />
         <library pathref="${name}.common.classpath" />
       </classpath>

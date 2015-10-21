@@ -18,25 +18,44 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING
  * IN THE SOFTWARE.
+ * 
+ * Portions Copyright (C) 2012-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * 
+ * Licensed under the Amazon Software License (the "License"). You may not use this 
+ * file except in compliance with the License. A copy of the License is located at
+ *  http://aws.amazon.com/asl/
+ * or in the "license" file accompanying this file. This file is distributed on 
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or
+ * implied. See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 
 package net.spy.memcached;
 
 import java.util.concurrent.Callable;
 
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import net.spy.memcached.categories.StandardTests;
 import net.spy.memcached.compat.SyncThread;
 import net.spy.memcached.transcoders.LongTranscoder;
+
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Test the CAS mutator.
  */
+@Category(StandardTests.class)
 public class CASMutatorTest extends ClientBaseCase {
 
   private CASMutation<Long> mutation;
   private CASMutator<Long> mutator;
 
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     mutation = new CASMutation<Long>() {
       public Long getNewValue(Long current) {
@@ -46,11 +65,13 @@ public class CASMutatorTest extends ClientBaseCase {
     mutator = new CASMutator<Long>(client, new LongTranscoder(), 50);
   }
 
+  @Test
   public void testDefaultConstructor() {
     // Just validate that this doesn't throw an exception.
     new CASMutator<Long>(client, new LongTranscoder());
   }
 
+  @Test
   public void testConcurrentCAS() throws Throwable {
     int num = SyncThread.getDistinctResultCount(20, new Callable<Long>() {
       public Long call() throws Exception {
@@ -60,6 +81,7 @@ public class CASMutatorTest extends ClientBaseCase {
     assertEquals(20, num);
   }
 
+  @Test
   public void testIncorrectTypeInCAS() throws Throwable {
     // Stick something for this CAS in the cache.
     client.set("x", 0, "not a long");
@@ -71,12 +93,14 @@ public class CASMutatorTest extends ClientBaseCase {
     }
   }
 
+  @Test
   public void testCASUpdateWithNullInitial() throws Throwable {
     client.set("x", 0, 1L);
     Long rv = mutator.cas("x", (Long) null, 0, mutation);
     assertEquals(rv, (Long) 2L);
   }
 
+  @Test
   public void testCASUpdateWithNullInitialNoExistingVal() throws Throwable {
     assertNull(client.get("x"));
     Long rv = mutator.cas("x", (Long) null, 0, mutation);
@@ -84,6 +108,7 @@ public class CASMutatorTest extends ClientBaseCase {
     assertNull(client.get("x"));
   }
 
+  @Test
   public void testCASValueToString() {
     CASValue<String> c = new CASValue<String>(717L, "hi");
     assertEquals("{CasValue 717/hi}", c.toString());

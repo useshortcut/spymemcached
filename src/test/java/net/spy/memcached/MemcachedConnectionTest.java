@@ -46,7 +46,7 @@ public class MemcachedConnectionTest extends TestCase {
   public void testConnectionsStatus() throws Exception {
     ConnectionFactory factory = new DefaultConnectionFactory();
     List<InetSocketAddress> addresses =
-      AddrUtil.getAddresses(TestConfig.IPV4_ADDR + ":11211");
+      AddrUtil.getAddresses(UnitTestConfig.IPV4_ADDR + ":11211");
     Collection<ConnectionObserver> observers =
       new ArrayList<ConnectionObserver>();
     MemcachedConnection mcc = new MemcachedConnection(10240, factory, addresses,
@@ -61,9 +61,9 @@ public class MemcachedConnectionTest extends TestCase {
     OperationFactory opfactory = new BinaryOperationFactory();
 
     MemcachedNode node = new MockMemcachedNode(
-      new InetSocketAddress(TestConfig.IPV4_ADDR, TestConfig.PORT_NUMBER));
+      new InetSocketAddress(UnitTestConfig.IPV4_ADDR, UnitTestConfig.PORT_NUMBER));
     MemcachedNode node2 = new MockMemcachedNode(
-      new InetSocketAddress("invalidIpAddr", TestConfig.PORT_NUMBER));
+      new InetSocketAddress("invalidIpAddr", UnitTestConfig.PORT_NUMBER));
 
     List<InetSocketAddress> nodes = new ArrayList<InetSocketAddress>();
     nodes.add((InetSocketAddress)node.getSocketAddress());
