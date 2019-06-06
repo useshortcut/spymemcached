@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/awslabs/aws-elasticache-cluster-client-memcached-for-java.svg?branch=master)](https://travis-ci.org/awslabs/aws-elasticache-cluster-client-memcached-for-java)
 
-Amazon ElastiCache Cluster Client is an enhanced Java library to connect to ElastiCache clusters. This client library has been built upon Spymemcached and is released under the [Amazon Software License](http://aws.amazon.com/asl/).
+Amazon ElastiCache Cluster Client is an enhanced Java library to connect to ElastiCache clusters. This client library has been built upon Spymemcached and is released under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
 
 # Building
 
