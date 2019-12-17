@@ -254,8 +254,8 @@ public abstract class TCPMemcachedNodeImpl extends SpyObject implements
   private FillWriteBufferStatus logCleanUpAndReturnStatus(
           final FillWriteBufferStatus status, final Operation op,
           final ByteBuffer obuf) {
-    if (getLogger().isDebugEnabled()) {
-      getLogger().debug("fillWriteBuffer not finished successfully."
+    if (getLogger().isInfoEnabled()) {
+      getLogger().info("fillWriteBuffer not finished successfully."
               + " FillWriteBufferStatus: " + status
               + " ByteBuffer: " + obuf
               + " Operation: " + op
