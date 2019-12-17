@@ -810,12 +810,18 @@ public class MemcachedConnection extends SpyThread {
    */
   private void handleWrites(final MemcachedNode node) throws IOException {
     FillWriteBufferStatus bufferFilledStatus = node.fillWriteBuffer(shouldOptimize);
+    if (bufferFilledStatus.needsReconnect()) {
+      throw new IOException("Reconnecting because write was interrupted by completion");
+    }
     boolean canWriteMore = node.getBytesRemainingToWrite() > 0;
     while (canWriteMore && bufferFilledStatus.isSuccess()) {
       int wrote = node.writeSome();
       metrics.updateHistogram(OVERALL_AVG_BYTES_WRITE_METRIC, wrote);
       bufferFilledStatus = node.fillWriteBuffer(shouldOptimize);
       canWriteMore = wrote > 0 && node.getBytesRemainingToWrite() > 0;
+    }
+    if (bufferFilledStatus.needsReconnect()) {
+      throw new IOException("Reconnecting because write was interrupted by completion");
     }
   }
 

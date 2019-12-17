@@ -199,8 +199,17 @@ public abstract class TCPMemcachedNodeImpl extends SpyObject implements
           final OperationState oState = o.getState();
           ByteBuffer obuf = o.getBuffer();
           // This cases may happen due to race condition. See FillWriteBufferNPETest.
+          // If we received a response to an operation before we finished sending
+          // the full payload we can no longer trust that the server and client
+          // are synchronized. For example, we may be in the middle of sending
+          // bytes of a declared length and not sent all the bytes yet,
+          // so the server may interpret the next op as part of the payload
+          // of the previous op.
+          // The only safe thing to do is abandon the current write op and
+          // close and reestablish the connection.
           if (oState != OperationState.WRITING || obuf == null) {
-            return logCleanUpAndReturnStatus(FillWriteBufferStatus.forOperationState(oState), o, obuf);
+            logCleanUpAndReturnStatus(FillWriteBufferStatus.forOperationState(oState), o, obuf);
+            return FillWriteBufferStatus.OP_STATUS_IS_INTERRUPTED_BY_COMPLETION;
           }
 
           int bytesToCopy = Math.min(getWbuf().remaining(), obuf.remaining());
