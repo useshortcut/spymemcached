@@ -52,7 +52,11 @@ public enum FillWriteBufferStatus {
      */
     OP_STATUS_IS_WRITE_QUEUED,
     OP_STATUS_IS_READING,
-    OP_STATUS_IS_RETRY
+    OP_STATUS_IS_RETRY,
+    /**
+     * The server completed a write operation but the
+     */
+    OP_STATUS_IS_INTERRUPTED_BY_COMPLETION
     ;
 
     public static FillWriteBufferStatus forOperationState(final OperationState opState) {
@@ -73,5 +77,8 @@ public enum FillWriteBufferStatus {
 
     public boolean isSuccess() {
         return this == SUCCESS;
+    }
+    public boolean needsReconnect() {
+        return this == OP_STATUS_IS_INTERRUPTED_BY_COMPLETION;
     }
 }
