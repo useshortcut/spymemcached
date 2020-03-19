@@ -434,6 +434,13 @@ public class DefaultConnectionFactory extends SpyObject implements
   /*
    * (non-Javadoc)
    *
+   * @see net.spy.memcached.ConnectionFactory#getKeepAlive()
+   */
+  public boolean getKeepAlive() { return false; }
+
+  /*
+   * (non-Javadoc)
+   *
    * @see net.spy.memcached.ConnectionFactory#shouldOptimize()
    */
   public boolean shouldOptimize() {
@@ -507,6 +514,6 @@ public class DefaultConnectionFactory extends SpyObject implements
       + getReadBufSize() + ", Transcoder: " + getDefaultTranscoder()
       + ", Operation Factory: " + getOperationFactory() + " isDaemon: "
       + isDaemon() + ", Optimized: " + shouldOptimize() + ", Using Nagle: "
-      + useNagleAlgorithm() + ", ConnectionFactory: " + getName();
+      + useNagleAlgorithm() + ", KeepAlive: " + getKeepAlive() + ", ConnectionFactory: " + getName();
   }
 }

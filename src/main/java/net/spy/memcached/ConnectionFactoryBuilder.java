@@ -68,6 +68,7 @@ public class ConnectionFactoryBuilder {
   protected boolean isDaemon = false;
   protected boolean shouldOptimize = false;
   protected boolean useNagle = false;
+  protected boolean keepAlive = false;
   protected long maxReconnectDelay =
       DefaultConnectionFactory.DEFAULT_MAX_RECONNECT_DELAY;
 
@@ -107,6 +108,7 @@ public class ConnectionFactoryBuilder {
     setTimeoutExceptionThreshold(cf.getTimeoutExceptionThreshold());
     setTranscoder(cf.getDefaultTranscoder());
     setUseNagleAlgorithm(cf.useNagleAlgorithm());
+    setKeepAlive(cf.getKeepAlive());
     setEnableMetrics(cf.enableMetrics());
     setListenerExecutorService(cf.getListenerExecutorService());
     setAuthWaitTime(cf.getAuthWaitTime());
@@ -237,6 +239,11 @@ public class ConnectionFactoryBuilder {
    */
   public ConnectionFactoryBuilder setUseNagleAlgorithm(boolean to) {
     useNagle = to;
+    return this;
+  }
+
+  public ConnectionFactoryBuilder setKeepAlive(boolean on) {
+    keepAlive = on;
     return this;
   }
 
@@ -426,6 +433,11 @@ public class ConnectionFactoryBuilder {
       @Override
       public boolean useNagleAlgorithm() {
         return useNagle;
+      }
+
+      @Override
+      public boolean getKeepAlive() {
+        return keepAlive;
       }
 
       @Override

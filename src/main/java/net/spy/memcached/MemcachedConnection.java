@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -424,7 +425,11 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
           this.connectionFactory.createMemcachedNode(sa, ch, bufSize);
       qa.setNodeEndPoint(endPoint);
       int ops = 0;
-      ch.socket().setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
+
+      Socket socket = ch.socket();
+
+      socket.setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
+      socket.setKeepAlive(connectionFactory.getKeepAlive());
 
       try {
         if (ch.connect(sa)) {
@@ -1312,7 +1317,12 @@ public class MemcachedConnection extends SpyThread implements ClusterConfigurati
 
           ch = SocketChannel.open();
           ch.configureBlocking(false);
-          ch.socket().setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
+
+          Socket socket = ch.socket();
+
+          socket.setTcpNoDelay(!connectionFactory.useNagleAlgorithm());
+          socket.setKeepAlive(connectionFactory.getKeepAlive());
+
           int ops = 0;
           SocketAddress sa;
           if(node.getNodeEndPoint() != null){
