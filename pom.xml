@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.amazonaws</groupId>
   <artifactId>elasticache-java-cluster-client</artifactId>
-  <version>1.1.1</version>
+  <version>1.1.2</version>
   <name>ElastiCacheJavaClusterClient</name>
   <description>Amazon ElastiCache Cluster Client is an enhanced Java library to connect to ElastiCache clusters. This client library has been built upon Spymemcached and is released under the Apache 2.0 License.</description>
   <url>https://aws.amazon.com/documentation/elasticache/</url>  
