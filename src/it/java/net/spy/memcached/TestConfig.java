@@ -35,7 +35,9 @@ public final class TestConfig {
   public static enum engineTypeEnum {
     V_1_4_24 ("1.4.24", true),
     V_1_4_14 ("1.4.14", true),
-    V_1_4_5 ("1.4.5", false);
+    V_1_4_5 ("1.4.5", false),
+    V_1_5_10 ("1.5.10", true),
+    V_1_5_16 ("1.5.16", true);
     private String version;
     private boolean setConfigSupported;
     engineTypeEnum(String version, boolean setConfigSupported) {

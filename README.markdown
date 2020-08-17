@@ -41,8 +41,8 @@ server binary. By default it is set to _/usr/bin/memcached_.
 
     -Dserver.version=version_of_testing_server
 
-This argument is used to specify the version of your testing server. Currently supported memcached versions by Elasticache are _1.4.5_, _1.4.14_, _1.4.24_.
-By default it is set to _1.4.24_.
+This argument is used to specify the version of your testing server. Currently supported memcached versions by Elasticache are _1.4.5_, _1.4.14_, _1.4.24_, _1.5.10_, _1.5.16_.
+By default it is set to _1.5.16_.
 
     -Dtest.type=ci
 

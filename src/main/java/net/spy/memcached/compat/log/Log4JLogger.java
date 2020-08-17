@@ -23,7 +23,8 @@
 
 package net.spy.memcached.compat.log;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Logging implementation using <a
@@ -42,7 +43,7 @@ public class Log4JLogger extends AbstractLogger {
     super(name);
 
     // Get the log4j logger instance.
-    l4jLogger = Logger.getLogger(name);
+    l4jLogger = LogManager.getLogger(name);
   }
 
   @Override
@@ -69,33 +70,33 @@ public class Log4JLogger extends AbstractLogger {
    */
   @Override
   public void log(Level level, Object message, Throwable e) {
-    org.apache.log4j.Level pLevel = org.apache.log4j.Level.DEBUG;
+    org.apache.logging.log4j.Level pLevel = org.apache.logging.log4j.Level.DEBUG;
 
     switch (level == null ? Level.FATAL : level) {
-    case TRACE:
-      pLevel = org.apache.log4j.Level.TRACE;
-      break;
-    case DEBUG:
-      pLevel = org.apache.log4j.Level.DEBUG;
-      break;
-    case INFO:
-      pLevel = org.apache.log4j.Level.INFO;
-      break;
-    case WARN:
-      pLevel = org.apache.log4j.Level.WARN;
-      break;
-    case ERROR:
-      pLevel = org.apache.log4j.Level.ERROR;
-      break;
-    case FATAL:
-      pLevel = org.apache.log4j.Level.FATAL;
-      break;
-    default:
-      // I don't know what this is, so consider it fatal
-      pLevel = org.apache.log4j.Level.FATAL;
-      l4jLogger.log("net.spy.compat.log.AbstractLogger", pLevel, "Unhandled "
-          + "log level:  " + level + " for the following message", null);
+      case TRACE:
+        pLevel = org.apache.logging.log4j.Level.TRACE;
+        break;
+      case DEBUG:
+        pLevel = org.apache.logging.log4j.Level.DEBUG;
+        break;
+      case INFO:
+        pLevel = org.apache.logging.log4j.Level.INFO;
+        break;
+      case WARN:
+        pLevel = org.apache.logging.log4j.Level.WARN;
+        break;
+      case ERROR:
+        pLevel = org.apache.logging.log4j.Level.ERROR;
+        break;
+      case FATAL:
+        pLevel = org.apache.logging.log4j.Level.FATAL;
+        break;
+      default:
+        // I don't know what this is, so consider it fatal
+        pLevel = org.apache.logging.log4j.Level.FATAL;
+        String logMessage = String.format("Unhandled log level: %s for the following message", level);
+        l4jLogger.log(pLevel, logMessage, (Throwable) null);
     }
-    l4jLogger.log("net.spy.compat.log.AbstractLogger", pLevel, message, e);
+    l4jLogger.log( pLevel, message, e );
   }
 }
