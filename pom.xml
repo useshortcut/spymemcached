@@ -2,17 +2,29 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.amazonaws</groupId>
   <artifactId>elasticache-java-cluster-client</artifactId>
-  <version>1.1.2</version>
-  <name>ElastiCacheJavaClusterClient</name>
+  <version>1.1.3</version>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>6</source>
+                    <target>6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <name>ElastiCacheJavaClusterClient</name>
   <description>Amazon ElastiCache Cluster Client is an enhanced Java library to connect to ElastiCache clusters. This client library has been built upon Spymemcached and is released under the Apache 2.0 License.</description>
-  <url>https://aws.amazon.com/documentation/elasticache/</url>  
+  <url>https://aws.amazon.com/documentation/elasticache/</url>
    
   <dependencies>
     <!-- Optional Dependencies at Runtime -->
     <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>1.2.16</version>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-1.2-api</artifactId>
+        <version>2.13.3</version>
         <optional>true</optional>
     </dependency>
     <dependency>

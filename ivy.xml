@@ -48,8 +48,8 @@ SOFTWARE.
   </publications>
 
   <dependencies defaultconfmapping="sources->sources(),%->default" defaultconf="default,sources">
-    <dependency org="log4j" name="log4j" rev="${log4j.version}"
-        conf="common->master" />
+    <dependency org="org.apache.logging.log4j" name="log4j-api" rev="2.13.3" conf="common->master" />
+    <dependency org="org.apache.logging.log4j" name="log4j-core" rev="2.13.3" conf="common->master" />
     <dependency org="jmock" name="jmock" rev="${jmock.version}"
         conf="common->master" />
     <dependency org="junit" name="junit" rev="${junit.version}"

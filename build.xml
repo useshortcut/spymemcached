@@ -126,12 +126,12 @@
   <property name="test.type" value="unit"/>
 
   <!--integration test related properties -->
-  <property name="client.mode" value="Dynamic"/>
+  <property name="client.mode" value="Static"/>
   <property name="server.address_v4" value="127.0.0.1"/>
   <property name="server.address_v6" value="::1"/>
   <property name="server.bin" value="/usr/bin/memcached"/>
   <property name="server.port_number" value="11211"/>
-  <property name="server.version" value="1.4.24"/>
+  <property name="server.version" value="1.5.16"/>
   <property name="test.type" value="unit"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
