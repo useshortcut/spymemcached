@@ -133,6 +133,13 @@ public class ConnectionFactoryBuilder {
    * wait for space to become available in an output queue.
    */
   public ConnectionFactoryBuilder setOpQueueMaxBlockTime(long t) {
+    String timeoutOverride = System.getProperty("clubhouse.spymemcached.forceOpQueueMaxBlockTimeMs");
+    if (timeoutOverride != null) {
+      try {
+        t = Long.parseLong(timeoutOverride);
+      } catch (NumberFormatException ignored) {
+      }
+    }
     opQueueMaxBlockTime = t;
     return this;
   }
@@ -179,6 +186,14 @@ public class ConnectionFactoryBuilder {
    * Set the default operation timeout in milliseconds.
    */
   public ConnectionFactoryBuilder setOpTimeout(long t) {
+    String timeoutOverride = System.getProperty("clubhouse.spymemcached.forceOpTimeoutMs");
+    if (timeoutOverride != null) {
+      try {
+        t = Long.parseLong(timeoutOverride);
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
     opTimeout = t;
     return this;
   }
@@ -232,6 +247,14 @@ public class ConnectionFactoryBuilder {
    * Convenience method to specify the protocol to use.
    */
   public ConnectionFactoryBuilder setProtocol(Protocol prot) {
+    String protOverride = System.getProperty("clubhouse.spymemcached.forceProtocol");
+    if (protOverride != null) {
+      if (protOverride.equals("BINARY")) {
+        prot = Protocol.BINARY;
+      } else if (protOverride.equals("TEXT")) {
+        prot = Protocol.TEXT;
+      }
+    }
     switch (prot) {
     case TEXT:
       opFact = new AsciiOperationFactory();
