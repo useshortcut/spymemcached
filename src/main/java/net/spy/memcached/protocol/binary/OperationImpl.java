@@ -423,7 +423,7 @@ public  abstract class OperationImpl extends BaseOperationImpl
 
   @Override
   public String toString() {
-    return "Cmd: " + cmd + " Opaque: " + opaque + "ErrorCode:" + errorCode;
+    return "Cmd: " + cmd + " Opaque: " + opaque + " ErrorCode:" + errorCode;
   }
 
   @Override
