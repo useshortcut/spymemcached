@@ -251,6 +251,14 @@ public class ConnectionFactoryBuilder {
    * Convenience method to specify the protocol to use.
    */
   public ConnectionFactoryBuilder setProtocol(Protocol prot) {
+    String protOverride = System.getProperty("clubhouse.spymemcached.forceProtocol");
+    if (protOverride != null) {
+      if (protOverride.equals("BINARY")) {
+        prot = Protocol.BINARY;
+      } else if (protOverride.equals("TEXT")) {
+        prot = Protocol.TEXT;
+      }
+    }
     switch (prot) {
     case TEXT:
       opFact = new AsciiOperationFactory();
