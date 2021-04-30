@@ -44,15 +44,12 @@ import net.spy.memcached.ops.OperationState;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.ops.TapOperation;
 import net.spy.memcached.ops.VBucketAware;
-import net.spy.memcached.protocol.TCPMemcachedNodeImpl;
 import net.spy.memcached.protocol.binary.BinaryOperationFactory;
 import net.spy.memcached.protocol.binary.MultiGetOperationImpl;
 import net.spy.memcached.protocol.binary.TapAckOperationImpl;
 import net.spy.memcached.util.StringUtils;
-import sun.nio.ch.IOUtil;
 
 import java.io.IOException;
-import java.lang.annotation.Native;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
