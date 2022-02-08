@@ -35,9 +35,9 @@
     </classpath>
   </taskdef>
 
-  <property name="name" value="AmazonElastiCacheClusterClient"/>
+  <property name="name" value="memcache-asg-java-client"/>
   <property name="copyright" value="2006-2011 Dustin Sallings, Matt Ingenthron, 2012-2015 Amazon.com, Inc. or its affiliates" />
-  <property name="group" value="spy" />
+  <property name="group" value="com.datomic" />
 
   <property name="base.src.dir" value="${basedir}/src" />
   <property name="build.dir" value="${basedir}/build" />
@@ -581,7 +581,6 @@
     <!-- prepare for mvn tasks. -->
     <property name="spymemcached.pom" value="${mvn.build.dir}/poms/spymemcached-${version}.pom" />
     <property name="spymemcached-test.pom" value="${mvn.build.dir}/poms/spymemcached-test-${version}.pom" />
-    <property name="spymemcached-it.pom" value="${mvn.build.dir}/poms/spymemcached-it-${version}.pom" />
 
     <!-- Register mvn tasks -->
     <path id="mvn-ant-task.classpath" path="${mvn.jar}" />
@@ -614,18 +613,10 @@
       <dependency group="org.springframework" artifact="spring-beans" version="${spring-beans.version}" optional="true" />
       <dependency group="com.codahale.metrics" artifact="metrics-core" version="${codahale.metrics.version}" />
    </ivy:makepom>
-
-    <ivy:makepom ivyfile="ivy/spymemcached-it.xml"
-        pomfile="${spymemcached-it.pom}"
-        templatefile="ivy/pom.template.xml"
-        settingsRef="${name}.ivy.settings">
-      <mapping conf="default" scope="compile" />
-      <mapping conf="runtime" scope="runtime" />
-      <dependency group="log4j" artifact="log4j" version="${log4j.version}" optional="true" />
-      <dependency group="org.slf4j" artifact="slf4j-api" version="${slf4j.version}" optional="true" />
-      <dependency group="org.springframework" artifact="spring-beans" version="${spring-beans.version}" optional="true" />
-      <dependency group="com.codahale.metrics" artifact="metrics-core" version="${codahale.metrics.version}" />
-   </ivy:makepom>
+<!--    Note (favila): the spymemcached-it.xml file is missing from awslabs upstream,
+        so spymemcached-it.pom is impossible to build.
+        It is only the "integration test" build, though,
+        which we don't need as pom or package to run tests. -->
 
     <!-- Change the version in the pom file to reflect our claimed version. -->
     <replaceregexp>
@@ -642,7 +633,7 @@
     <!-- @todo: change to use ivy publish -->
     <artifact:pom id="spymemcached" file="${spymemcached.pom}" />
     <artifact:install file="${build.dir}/jars/${name}-${version}.jar">
-      <pom refid="${name}" />
+      <pom refid="spymemcached" />
       <attach file="${build.dir}/sources/${name}-${version}.jar"
           classifier="sources" />
       <attach file="${build.dir}/javadocs/${name}-${version}.jar"
@@ -650,18 +641,10 @@
     </artifact:install>
     <artifact:pom id="spymemcached-test" file="${spymemcached-test.pom}" />
       <artifact:install file="${build.dir}/jars/${name}-test-${version}.jar">
-        <pom refid="${name}-test" />
+        <pom refid="spymemcached-test" />
         <attach file="${build.dir}/sources/${name}-test-${version}.jar"
           classifier="sources" />
         <attach file="${build.dir}/javadocs/${name}-test-${version}.jar"
-          classifier="javadoc" />
-    </artifact:install>
-    <artifact:pom id="spymemcached-it" file="${spymemcached-it.pom}" />
-      <artifact:install file="${build.dir}/jars/${name}-it-${version}.jar">
-        <pom refid="${name}-it" />
-        <attach file="${build.dir}/sources/${name}-it-${version}.jar"
-          classifier="sources" />
-        <attach file="${build.dir}/javadocs/${name}-it-${version}.jar"
           classifier="javadoc" />
     </artifact:install>
   </target>
@@ -737,38 +720,6 @@
             <arg value="-DrepositoryId=${maven-staging-repository-id}" />
             <arg value="-DpomFile=${spymemcached-test.pom}" />
             <arg value="-Dfile=${build.dir}/javadocs/${name}-test-${version}.jar" />
-            <arg value="-Dclassifier=javadoc" />
-            <arg value="-Pgpg" />
-    </artifact:mvn>
-
-        <!-- sign and deploy the main artifact -->
-    <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=${spymemcached-it.pom}" />
-            <arg value="-Dfile=${build.dir}/jars/${name}-it-${version}.jar" />
-            <arg value="-Pgpg" />
-    </artifact:mvn>
-
-    <!-- sign and deploy the sources artifact -->
-    <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=${spymemcached-it.pom}" />
-            <arg value="-Dfile=${build.dir}/sources/${name}-it-${version}.jar" />
-            <arg value="-Dclassifier=sources" />
-            <arg value="-Pgpg" />
-    </artifact:mvn>
-
-    <!-- sign and deploy the javadoc artifact -->
-    <artifact:mvn>
-            <arg value="org.apache.maven.plugins:maven-gpg-plugin:1.3:sign-and-deploy-file" />
-            <arg value="-Durl=${maven-staging-repository-url}" />
-            <arg value="-DrepositoryId=${maven-staging-repository-id}" />
-            <arg value="-DpomFile=${spymemcached-it.pom}" />
-            <arg value="-Dfile=${build.dir}/javadocs/${name}-it-${version}.jar" />
             <arg value="-Dclassifier=javadoc" />
             <arg value="-Pgpg" />
     </artifact:mvn>
@@ -851,6 +802,9 @@
         <exclude name="LICENSE.txt" />
         <exclude name="README.markdown" />
         <exclude name=".gitreview" />
+        <exclude name=".travis.yml" />
+        <exclude name="NOTICE.txt" />
+        <exclude name="SECURITY.md" />
 	<exclude name=".git/**" />
 	<exclude name=".idea/**" />
 	<exclude name="pom.xml" />
