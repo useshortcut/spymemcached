@@ -805,6 +805,7 @@
         <exclude name=".travis.yml" />
         <exclude name="NOTICE.txt" />
         <exclude name="SECURITY.md" />
+        <exclude name="*.pom" />
 	<exclude name=".git/**" />
 	<exclude name=".idea/**" />
 	<exclude name="pom.xml" />
