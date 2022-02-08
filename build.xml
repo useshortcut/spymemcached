@@ -341,8 +341,8 @@
         destdir="${build.test.classes}"
         debug="${javac.debug}"
         includeantruntime="false"
-        target="1.6"
-        source="1.6">
+        target="11"
+        source="11">
       <classpath>
         <path refid="test.classpath"/>
       </classpath>
@@ -359,8 +359,8 @@
         destdir="${build.it.classes}"
         debug="${javac.debug}"
         includeantruntime="false"
-        target="1.6"
-        source="1.6">
+        target="11"
+        source="11">
       <classpath>
         <path refid="it.classpath"/>
       </classpath>
@@ -491,8 +491,8 @@
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
         includeantruntime="false"
-        target="1.6"
-        source="1.6">
+        target="11"
+        source="11">
       <classpath refid="${name}.common.classpath" />
     </javac>
 
@@ -504,8 +504,8 @@
         debug="${javac.debug}"
         deprecation="${javac.deprecation}"
         includeantruntime="false"
-        target="1.6"
-        source="1.6">
+        target="11"
+        source="11">
       <classpath refid="${name}.common.classpath"/>
     </javac>
     <move file="${build.src.dir}/net/spy/memcached/changelog.txt"
