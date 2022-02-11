@@ -97,33 +97,7 @@ public final class BuildInfo extends Properties {
 
   public static void main(String args[]) throws Exception {
     BuildInfo bi=new BuildInfo();
-    String cl="%" + "CHANGELOG" + "%";
-
     System.out.println(bi);
-
-    // If there was a changelog, let it be shown.
-    if(!cl.equals("net/spy/memcached/changelog.txt")) {
-      if(args.length > 0 && args[0].equals("-c")) {
-        System.out.println(" -- Changelog:\n");
-
-        URL u=bi.getFile("net/spy/memcached/changelog.txt");
-        InputStream is=u.openStream();
-        try {
-          byte data[]=new byte[8192];
-          int bread=0;
-          do {
-            bread=is.read(data);
-            if(bread > 0) {
-              System.out.write(data, 0, bread);
-            }
-          } while(bread != -1);
-        } finally {
-          is.close();
-        }
-      } else {
-        System.out.println("(add -c to see the recent changelog)");
-      }
-    }
   }
 }
 EOF
