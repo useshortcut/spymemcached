@@ -708,6 +708,7 @@
         <exclude name="LICENSE.txt" />
         <exclude name="README.markdown" />
         <exclude name=".gitreview" />
+        <exclude name="*.pom" />
 	<exclude name=".git/**" />
 	<exclude name=".idea/**" />
 	<exclude name="pom.xml" />
