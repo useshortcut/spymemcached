@@ -418,8 +418,14 @@
         source="11">
       <classpath refid="${name}.common.classpath"/>
     </javac>
+    <!--
+    This adds a changelog to the jar that you can read with
+    `java -jar the-jar.jar -c`
+    But this adds hundreds of kb and leaks information, so we comment it out.
+
     <move file="${build.src.dir}/net/spy/memcached/changelog.txt"
         tofile="${build.classes}/net/spy/memcached/changelog.txt" />
+    -->
   </target>
 
   <target name="srcjar" depends="init,jar"
