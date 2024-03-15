@@ -10,12 +10,12 @@
   <groupId>com.datomic</groupId>
   <artifactId>memcache-asg-java-client</artifactId>
   <packaging>jar</packaging>
-  <version>2.12.3.sc5</version>
+  <version>2.12.3.sc6</version>
   <name>Spymemcached</name>
   <description>Shortcut fork of Spymemcached Java client for Datomic >= 1.0.6316</description>
   <url>https://github.com/useshortcut/spymemcached</url>
   <scm>
-    <tag>2.12.3.sc5</tag>
+    <tag>2.12.3.sc6</tag>
     <url>https://github.com/useshortcut/spymemcached/tree/${project.scm.tag}</url>
     <connection>scm:git:https://github.com/useshortcut/spymemcached.git</connection>
     <developerConnection>scm:git:git@github.com:useshortcut/spymemcached.git</developerConnection>
