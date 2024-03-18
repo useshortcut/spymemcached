@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- This pom is meant for Shortcut use only in private repositories;
+       do not push it to any public repositories.
+       In particular, note that we *do not* own this groupId!
+       The group and artifact ids match Datomic's just to ease version pinning.
+  -->
+  <groupId>com.datomic</groupId>
+  <artifactId>memcache-asg-java-client</artifactId>
+  <packaging>jar</packaging>
+  <version>2.12.3.sc6</version>
+  <name>Spymemcached</name>
+  <description>Shortcut fork of Spymemcached Java client for Datomic >= 1.0.6316</description>
+  <url>https://github.com/useshortcut/spymemcached</url>
+  <scm>
+    <tag>2.12.3.sc6</tag>
+    <url>https://github.com/useshortcut/spymemcached/tree/${project.scm.tag}</url>
+    <connection>scm:git:https://github.com/useshortcut/spymemcached.git</connection>
+    <developerConnection>scm:git:git@github.com:useshortcut/spymemcached.git</developerConnection>
+  </scm>
+</project>

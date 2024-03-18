@@ -47,7 +47,9 @@ The patchset includes:
 4. Some minor build.xml bitrot cleanup, changelog suppression, and targets Java 11.
 5. Some system properties to override protocol and some timeout values.
    https://github.com/useshortcut/spymemcached/pull/2
-6. Removal of the pom.xml file, since it's a development-only tool that we do not need.
+6. A package rename from `net.spy.memcached` to `datomic.spy.memcached`.
+   This is needed on datomic versions >= 1.0.6726 because of shading.
+7. Removal of the pom.xml file, since it's a development-only tool that we do not need.
 
 The last item requires explanation.
 We use [McRouter] ([our fork][McRouter-shortcut]) as a memcached proxy

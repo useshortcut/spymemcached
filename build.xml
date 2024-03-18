@@ -423,8 +423,8 @@
     `java -jar the-jar.jar -c`
     But this adds hundreds of kb and leaks information, so we comment it out.
 
-    <move file="${build.src.dir}/net/spy/memcached/changelog.txt"
-        tofile="${build.classes}/net/spy/memcached/changelog.txt" />
+    <move file="${build.src.dir}/datomic/spy/memcached/changelog.txt"
+        tofile="${build.classes}/datomic/spy/memcached/changelog.txt" />
     -->
   </target>
 
@@ -448,7 +448,7 @@
         <attribute name="Implementation-Version" value="${version}" />
         <attribute name="Implementation-Vendor" value="${copyright}" />
         <attribute name="Copyright" value="${copyright}" />
-        <attribute name="Main-Class" value="net.spy.memcached.BuildInfo" />
+        <attribute name="Main-Class" value="datomic.spy.memcached.BuildInfo" />
       </manifest>
     </jar>
     <jar jarfile="${build.dir}/jars/${name}-test-${version}.jar" basedir="${build.test.classes}"/>
